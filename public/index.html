@@ -54,7 +54,7 @@ main{width:100%;max-width:760px;padding:0 16px 24px;flex:1}
 </style>
 </head>
 <body>
-<header><h1>🐰 Momo</h1><div class="stars">⭐ <span id="stars">0</span></div></header>
+<header><h1><span id="hpet">🐰</span> Momo</h1><div class="stars">⭐ <span id="stars">0</span></div></header>
 <main id="app"></main>
 <script>
 // ---------- Vocabulary: [emoji, English, Chinese, pinyin] ----------
@@ -108,14 +108,30 @@ const PATHS={
      P("letter","clothes"),P("talk","vehicles"),P("memory","clothes",1),P("add","numbers",1),P("odd","shapes",1),P("seq","family",1),
      P("pattern","shapes",1),P("letter","shapes",1),P("pop","vehicles",1),P("talk","food",1)],
 };
+// ---------- Characters (cute animal buddies) ----------
+// e: emoji · n: Thai name · en/zh: how the buddy introduces itself · hi: home greeting
+const PETS=[
+  {id:"momo",e:"🐰",n:"โมโมะ",en:"Hi! I am Momo the bunny!",zh:"你好!我是小兔子Momo!",hi:"กระโดดเหยงๆ ไปเล่นกันเถอะ!"},
+  {id:"panpan",e:"🐼",n:"แพนแพน",en:"Hello! I am Panpan the panda!",zh:"你好!我是熊猫盼盼!",hi:"แพนแพนชอบกินไผ่ แต่ชอบเรียนกับหนูที่สุด!"},
+  {id:"miew",e:"🐱",n:"เหมียวเหมียว",en:"Meow! I am Miew the kitty!",zh:"喵!我是小猫咪咪!",hi:"เมี้ยว~ วันนี้เล่นอะไรดีน้า"},
+  {id:"puy",e:"🐶",n:"ปุยฝ้าย",en:"Woof! I am Puy the puppy!",zh:"汪汪!我是小狗!",hi:"โฮ่งๆ! ปุยฝ้ายพร้อมแล้ว!"},
+  {id:"kiko",e:"🦊",n:"กิโกะ",en:"Hi! I am Kiko the fox!",zh:"你好!我是小狐狸!",hi:"กิโกะฉลาดมาก มาแข่งกันไหม?"},
+  {id:"lala",e:"🦄",n:"ลาล่า",en:"Hello! I am Lala the unicorn!",zh:"你好!我是独角兽拉拉!",hi:"ลาล่าเสกดาวให้ทุกครั้งที่หนูตอบถูก ✨"},
+  {id:"koko",e:"🐨",n:"โคโค่",en:"Hi! I am Koko the koala!",zh:"你好!我是考拉可可!",hi:"โคโค่ง่วงนิดหน่อย มาช่วยปลุกหน่อยนะ"},
+  {id:"gab",e:"🐸",n:"อ๊บอ๊บ",en:"Ribbit! I am Gab the frog!",zh:"呱呱!我是小青蛙!",hi:"อ๊บๆ! กระโดดไปเรียนด้วยกันนะ"},
+  {id:"chick",e:"🐥",n:"ปิ๊บปิ๊บ",en:"Tweet! I am Peep the chick!",zh:"叽叽!我是小鸡!",hi:"ปิ๊บๆ! ปิ๊บปิ๊บตัวเล็กแต่ใจใหญ่"},
+  {id:"tiger",e:"🐯",n:"ไทเกอร์",en:"Roar! I am Tiger!",zh:"嗷呜!我是小老虎!",hi:"แฮ่! ไทเกอร์จะช่วยหนูเก่งขึ้น!"},
+];
+const pet=()=>PETS.find(p=>p.id===S.pet)||PETS[0];
+
 const STICKERS=["🦄","🐼","🦁","🐸","🐵","🐧","🦋","🐳","🌈","🚀","🍦","🎂","🧸","👑","🎩","🕶️","🦖","🐙","🌻","🍩"];
 const PRICE=10;
 
 // ---------- State ----------
-const S={stars:0,spent:0,stickers:[],stats:{},done:{},lang:"en",hat:"",age:0};
+const S={stars:0,spent:0,stickers:[],stats:{},done:{},lang:"en",hat:"",age:0,pet:""};
 try{Object.assign(S,JSON.parse(localStorage.getItem("momo")||"{}"))}catch(e){}
 const $=q=>document.querySelector(q), app=$("#app");
-const save=()=>{try{localStorage.setItem("momo",JSON.stringify(S))}catch(e){};$("#stars").textContent=S.stars-S.spent};
+const save=()=>{try{localStorage.setItem("momo",JSON.stringify(S))}catch(e){};$("#stars").textContent=S.stars-S.spent;$("#hpet").textContent=pet().e};
 const shuffle=a=>a.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
@@ -145,10 +161,26 @@ const shake=b=>{b.classList.add("no");setTimeout(()=>b.classList.remove("no"),40
 // ---------- Age picker ----------
 function agePick(){
   clearTimers();
-  app.innerHTML=`<div class="momo">🐰</div><div class="say">น้องอายุเท่าไหร่จ๊ะ?<br><small>เลือกเพื่อปรับความยากให้พอดี (เปลี่ยนได้ทีหลัง)</small></div>
+  app.innerHTML=`<div class="momo">${pet().e}</div><div class="say">น้องอายุเท่าไหร่จ๊ะ?<br><small>เลือกเพื่อปรับความยากให้พอดี (เปลี่ยนได้ทีหลัง)</small></div>
    <div class="grid age" style="grid-template-columns:repeat(2,1fr)">${Object.entries(AGES).map(([a,g])=>
      `<button class="btn ${S.age==a?"on":""}" data-a="${a}"><span class="e">${g.icon}</span><b style="font-size:1.6rem">${g.label}</b><small style="display:block">${g.kg}</small></button>`).join("")}</div>`;
-  app.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{S.age=+b.dataset.a;save();speak(`${b.dataset.a} ขวบ`,"th");home()});
+  app.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{S.age=+b.dataset.a;save();speak(`${b.dataset.a} ขวบ`,"th");petPick()});
+}
+
+// ---------- Character picker ----------
+function petPick(){
+  clearTimers();
+  let sel=S.pet||"momo";
+  const draw=()=>{const p=PETS.find(x=>x.id===sel);
+    app.innerHTML=`<div class="momo" style="font-size:6rem">${p.e}</div>
+     <div class="say"><b>${p.n}</b><br><small>เลือกเพื่อนร่วมเล่นกันเลย!</small></div>
+     <div class="grid pets" style="grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:10px">${PETS.map(x=>
+       `<button class="btn ${x.id===sel?"on":""}" data-p="${x.id}" style="font-size:2.6rem;padding:12px 4px">${x.e}<small style="display:block;font-size:.75rem">${x.n}</small></button>`).join("")}</div>
+     <div class="grid" style="margin-top:18px"><button class="btn" id="go" style="background:var(--green);color:#fff"><span class="e">${p.e}</span>ไปเล่นกับ${p.n}!</button></div>`;
+    app.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{sel=b.dataset.p;draw();const q=PETS.find(x=>x.id===sel);speak(q[S.lang]||q.en)});
+    $("#go").onclick=()=>{S.pet=sel;save();home()};
+  };
+  draw();
 }
 
 // ---------- Home / level map ----------
@@ -157,11 +189,12 @@ const unlocked=i=>i===0||S.done[levelKey(i-1)];
 function home(){
   clearTimers();
   if(!S.age)return agePick();
+  if(!S.pet)return petPick();
   const path=PATHS[S.age], g=AGES[S.age], cleared=path.filter((_,i)=>S.done[levelKey(i)]).length;
   app.innerHTML=`
-    <div class="momo">🐰${S.hat}</div>
+    <div class="momo" id="pet">${pet().e}${S.hat}</div><div class="say">${pet().hi}</div>
     <div class="row">
-      <button class="btn" id="age">${g.icon} ${g.label} ✏️</button>
+      <button class="btn" id="age">${g.icon} ${g.label} ✏️</button><button class="btn" id="chpet">${pet().e} เปลี่ยนเพื่อน</button>
       <button class="btn ${S.lang==="en"?"on":""}" data-l="en">🇬🇧 English</button>
       <button class="btn ${S.lang==="zh"?"on":""}" data-l="zh">🇨🇳 中文</button>
     </div>
@@ -181,7 +214,7 @@ function home(){
     if(!unlocked(i)){speak("ผ่านด่านก่อนหน้าก่อนนะ","th");return}
     run(i);
   });
-  $("#age").onclick=agePick;$("#book").onclick=book;$("#par").onclick=parentGate;
+  $("#age").onclick=agePick;$("#chpet").onclick=petPick;$("#pet").onclick=()=>speak(pet()[S.lang]||pet().en);$("#book").onclick=book;$("#par").onclick=parentGate;
 }
 
 // ---------- Level runner (shared by every game) ----------
@@ -205,7 +238,7 @@ function run(idx){
     S.done[k]=Math.max(S.done[k]||0,st);S.stars+=st;save();
     speak(T("Hooray! You did it!","太棒了!"));
     const hasNext=idx+1<PATHS[S.age].length;
-    app.innerHTML=`<div class="momo">🎉🐰🎉</div><div class="prompt" style="font-size:3rem">${"⭐".repeat(st)}${"☆".repeat(3-st)}</div>
+    app.innerHTML=`<div class="momo">🎉${pet().e}🎉</div><div class="prompt" style="font-size:3rem">${"⭐".repeat(st)}${"☆".repeat(3-st)}</div>
      <div class="prompt">เก่งมาก! +${st} ⭐</div>
      <div class="grid"><button class="btn" id="again"><span class="e">🔁</span>เล่นอีก</button>
      ${hasNext?`<button class="btn" id="nx" style="background:var(--yellow)"><span class="e">➡️</span>ด่านต่อไป</button>`:""}
@@ -343,7 +376,7 @@ const GAME_FN={
     if(!list.every(w=>opts.includes(w)))list.forEach((w,i)=>{if(!opts.includes(w))opts[i]=w});
     let pos=0;
     const play=()=>{speechSynthesis?.cancel();list.forEach(w=>speak(word(w),S.lang,1))};
-    app.innerHTML=ctx.head(`<div class="say">ฟังโมโมะ แล้วแตะตามลำดับ (${len} คำ)</div>
+    app.innerHTML=ctx.head(`<div class="say">ฟัง${pet().n} แล้วแตะตามลำดับ (${len} คำ)</div>
       <div class="prompt"><button class="btn" id="rep">🔊 ฟังอีกครั้ง</button></div><div class="seq" id="got">${"⬜".repeat(len)}</div>`)+
       `<div class="choices ${opts.length===3?"c3":""}">${opts.map((o,i)=>`<button class="btn" data-c="${i}"><span class="e">${o[0]}</span></button>`).join("")}</div>`;
     ctx.bind();$("#rep").onclick=()=>{pos=0;$("#got").textContent="⬜".repeat(len);play()};later(play,300);
@@ -387,7 +420,7 @@ const GAME_FN={
 function book(){
   const free=S.stars-S.spent;
   app.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><button class="btn back" id="back">🏠</button><b>📒 สมุดสติกเกอร์</b><span>⭐ ${free}</span></div>
-    <div class="say">แลกสติกเกอร์ ${PRICE} ⭐ · แตะสติกเกอร์ที่ได้แล้วเพื่อให้โมโมะใส่</div>
+    <div class="say">แลกสติกเกอร์ ${PRICE} ⭐ · แตะสติกเกอร์ที่ได้แล้วเพื่อให้${pet().n}ใส่</div>
     <div class="grid" style="grid-template-columns:repeat(5,1fr)">${STICKERS.map(s=>{const has=S.stickers.includes(s);
       return `<button class="btn ${has?"":"locked"} ${S.hat===s?"on":""}" data-s="${s}" style="font-size:2.3rem;padding:10px">${has?s:"❔"}</button>`}).join("")}</div>
     <div class="grid" style="margin-top:16px"><button class="btn" id="buy" style="background:var(--yellow)"><span class="e">🎁</span>สุ่มสติกเกอร์ (${PRICE}⭐)</button></div>`;
@@ -421,7 +454,7 @@ function parentPage(){
     <p class="note">เคล็ดลับ: ชี้ของจริงในบ้านแล้วถามลูกด้วยคำในกลุ่ม "ควรฝึกเพิ่ม" จะจำได้เร็วขึ้น</p>
     <button class="btn" id="reset" style="font-size:.9rem">🗑 ล้างข้อมูลทั้งหมด</button>`;
   $("#back").onclick=home;
-  $("#reset").onclick=()=>{if(confirm("ล้างดาว สติกเกอร์ ด่าน และสถิติทั้งหมด?")){Object.assign(S,{stars:0,spent:0,stickers:[],stats:{},done:{},hat:"",age:0});save();home()}};
+  $("#reset").onclick=()=>{if(confirm("ล้างดาว สติกเกอร์ ด่าน และสถิติทั้งหมด?")){Object.assign(S,{stars:0,spent:0,stickers:[],stats:{},done:{},hat:"",age:0,pet:""});save();home()}};
 }
 
 save();home();
