@@ -164,9 +164,25 @@ function bestVoice(lang){
 if(window.speechSynthesis)speechSynthesis.onvoiceschanged=()=>{for(const k in voiceCache)delete voiceCache[k]};
 // Each buddy has a slightly different, gentle voice pitch
 const PET_PITCH={momo:1.2,panpan:1.05,miew:1.25,puy:1.15,kiko:1.1,lala:1.25,koko:1,gab:1.1,chick:1.3,tiger:1,pengu:1.15,leo:.95};
+// Pre-recorded neural voice clips (tools/gen-audio.mjs) — natural, child-friendly.
+// Falls back to the browser voice for anything not recorded.
+let CLIPS={};
+fetch("audio/index.json").then(r=>r.ok?r.json():{}).then(j=>CLIPS=j).catch(()=>{});
+const player=new Audio();let clipQueue=[];
+player.onended=()=>{const n=clipQueue.shift();if(n){player.src=n;player.play().catch(()=>{})}};
+function stopVoice(){clipQueue=[];player.pause();window.speechSynthesis?.cancel()}
 let speakTimer;
 function speak(text,lang=S.lang,keep){
-  if(!window.speechSynthesis||S.mute)return;
+  if(S.mute)return;
+  const clip=CLIPS[`${lang}|${text}`];
+  if(clip){
+    const src="audio/"+clip;
+    if(keep&&!player.paused&&!player.ended){clipQueue.push(src);return}   // queue (parrot game)
+    if(!keep)stopVoice();
+    player.src=src;player.play().catch(()=>{});return;
+  }
+  if(!window.speechSynthesis)return;
+  if(location.protocol.startsWith("http")&&Object.keys(CLIPS).length)console.warn("no clip for",lang,text);
   const say=()=>{
     const u=new SpeechSynthesisUtterance(String(text)), v=bestVoice(lang);
     u.lang=LC[lang];if(v)u.voice=v;
@@ -178,7 +194,7 @@ function speak(text,lang=S.lang,keep){
   };
   if(keep){say();return}
   // cancel() then speaking instantly causes clipped/stuttering audio in Chrome; give it a breath
-  speechSynthesis.cancel();clearTimeout(speakTimer);speakTimer=setTimeout(say,60);
+  stopVoice();clearTimeout(speakTimer);speakTimer=setTimeout(say,60);
 }
 
 // ---------- Cute sound effects (Web Audio, no files needed) ----------
@@ -268,7 +284,7 @@ function home(){
     if(!unlocked(i)){speak("ผ่านด่านก่อนหน้าก่อนนะ","th");return}
     run(i);
   });
-  $("#age").onclick=agePick;$("#chpet").onclick=petPick;$("#mute").onclick=()=>{S.mute=!S.mute;if(S.mute)speechSynthesis?.cancel();save();home()};$("#pet").onclick=()=>speak(pet()[S.lang]||pet().en);$("#book").onclick=book;$("#par").onclick=parentGate;
+  $("#age").onclick=agePick;$("#chpet").onclick=petPick;$("#mute").onclick=()=>{S.mute=!S.mute;if(S.mute)stopVoice();save();home()};$("#pet").onclick=()=>speak(pet()[S.lang]||pet().en);$("#book").onclick=book;$("#par").onclick=parentGate;
 }
 
 // ---------- Level runner (shared by every game) ----------
@@ -283,7 +299,7 @@ function run(idx){
     head(sub=""){return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">
       <button class="btn back" id="back">🏠</button><b>${G.i} ${G.t} · ${SETNAME[L.set]}</b>
       <span>${rounds>1?"🟢".repeat(r)+"⚪".repeat(rounds-r):""}</span></div>${sub}`},
-    bind(){$("#back").onclick=()=>{speechSynthesis?.cancel();home()}},
+    bind(){$("#back").onclick=()=>{stopVoice();home()}},
   };
   const step=()=>{clearTimers();GAME_FN[L.game](ctx)};
   function finish(){
@@ -429,7 +445,7 @@ const GAME_FN={
     const len=ctx.d.seq, list=Array.from({length:len},()=>pick(ctx.set)), opts=shuffle([...new Set([...list,...shuffle(ctx.set)])]).slice(0,Math.max(ctx.d.n,new Set(list).size));
     if(!list.every(w=>opts.includes(w)))list.forEach((w,i)=>{if(!opts.includes(w))opts[i]=w});
     let pos=0;
-    const play=()=>{speechSynthesis?.cancel();list.forEach(w=>speak(word(w),S.lang,1))};
+    const play=()=>{stopVoice();list.forEach(w=>speak(word(w),S.lang,1))};
     app.innerHTML=ctx.head(`<div class="say">ฟัง${pet().n} แล้วแตะตามลำดับ (${len} คำ)</div>
       <div class="prompt"><button class="btn" id="rep">🔊 ฟังอีกครั้ง</button></div><div class="seq" id="got">${"⬜".repeat(len)}</div>`)+
       `<div class="choices ${opts.length===3?"c3":""}">${opts.map((o,i)=>`<button class="btn" data-c="${i}"><span class="e">${o[0]}</span></button>`).join("")}</div>`;
