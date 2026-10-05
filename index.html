@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Momo</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{--bg:#fff6e9;--card:#fff;--pink:#ff8fab;--yellow:#ffd166;--green:#06d6a0;--blue:#4cc9f0;--ink:#5a3e36}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+body{margin:0;font-family:"Comic Sans MS","Chalkboard SE",system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center}
+header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 16px}
+h1{margin:0;font-size:2rem;color:var(--pink)}
+.stars{font-size:1.4rem;background:var(--card);padding:6px 14px;border-radius:20px;box-shadow:0 3px 0 #0001}
+main{width:100%;max-width:720px;padding:0 16px 24px;flex:1}
+.momo{font-size:5rem;text-align:center;animation:bob 2s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-10px)}}
+.say{text-align:center;font-size:1.3rem;margin:4px 0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px}
+.btn{border:0;border-radius:24px;padding:18px 10px;font:inherit;font-size:1.2rem;color:var(--ink);background:var(--card);box-shadow:0 6px 0 #0002;cursor:pointer;transition:transform .1s}
+.btn:active{transform:translateY(4px);box-shadow:0 2px 0 #0002}
+.btn .e{font-size:3rem;display:block}
+.btn.locked{opacity:.45}
+.lang{display:flex;gap:10px;justify-content:center;margin-bottom:16px}
+.lang .btn{padding:10px 18px}
+.lang .on{background:var(--yellow)}
+.choices{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:10px}
+.choices .btn .e{font-size:4.5rem}
+.prompt{font-size:2rem;text-align:center;margin:10px 0}
+.ok{background:var(--green)!important;color:#fff}
+.no{animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.back{background:var(--blue);color:#fff;padding:10px 16px}
+.mem{grid-template-columns:repeat(4,1fr)}
+.mem .btn{min-height:90px;font-size:2.4rem;padding:8px}
+.mem .hid{background:var(--pink);color:transparent}
+.pop{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:8rem;pointer-events:none;animation:pop 1s forwards}
+@keyframes pop{0%{transform:scale(.2);opacity:0}30%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:0}}
+.parent{font-size:.9rem;opacity:.7;text-align:center;margin-top:20px}
+</style>
+</head>
+<body>
+<header><h1>🐰 Momo</h1><div class="stars">⭐ <span id="stars">0</span></div></header>
+<main id="app"></main>
+<script>
+// ---------- Data (vocab by age) ----------
+const V = {
+  animals:[["🐶","dog","狗","gǒu"],["🐱","cat","猫","māo"],["🐟","fish","鱼","yú"],["🐦","bird","鸟","niǎo"],["🐷","pig","猪","zhū"],["🐮","cow","牛","niú"]],
+  colors:[["🔴","red","红色","hóngsè"],["🔵","blue","蓝色","lánsè"],["🟡","yellow","黄色","huángsè"],["🟢","green","绿色","lǜsè"],["⚫","black","黑色","hēisè"],["⚪","white","白色","báisè"]],
+  fruits:[["🍎","apple","苹果","píngguǒ"],["🍌","banana","香蕉","xiāngjiāo"],["🍇","grapes","葡萄","pútao"],["🍉","watermelon","西瓜","xīguā"],["🍊","orange","橙子","chéngzi"],["🍓","strawberry","草莓","cǎoméi"]],
+  numbers:[[1,"one","一","yī"],[2,"two","二","èr"],[3,"three","三","sān"],[4,"four","四","sì"],[5,"five","五","wǔ"],[6,"six","六","liù"],[7,"seven","七","qī"],[8,"eight","八","bā"],[9,"nine","九","jiǔ"],[10,"ten","十","shí"]],
+  body:[["👀","eyes","眼睛","yǎnjing"],["👂","ears","耳朵","ěrduo"],["👃","nose","鼻子","bízi"],["👄","mouth","嘴巴","zuǐba"],["✋","hand","手","shǒu"],["🦶","foot","脚","jiǎo"]],
+  vehicles:[["🚗","car","汽车","qìchē"],["🚌","bus","公共汽车","gōnggòng qìchē"],["🚲","bike","自行车","zìxíngchē"],["✈️","plane","飞机","fēijī"],["🚂","train","火车","huǒchē"],["⛵","boat","船","chuán"]],
+  family:[["👨","dad","爸爸","bàba"],["👩","mom","妈妈","māma"],["👴","grandpa","爷爷","yéye"],["👵","grandma","奶奶","nǎinai"],["👦","brother","哥哥","gēge"],["👧","sister","姐姐","jiějie"]],
+  food:[["🍚","rice","米饭","mǐfàn"],["🥛","milk","牛奶","niúnǎi"],["🍞","bread","面包","miànbāo"],["🥚","egg","鸡蛋","jīdàn"],["🍜","noodles","面条","miàntiáo"],["💧","water","水","shuǐ"]],
+  feelings:[["😀","happy","开心","kāixīn"],["😢","sad","难过","nánguò"],["😠","angry","生气","shēngqì"],["😴","sleepy","困","kùn"]],
+};
+// Levels: K1 (3-4) → K3 (5-6)
+const LEVELS = [
+  {id:1,age:"อนุบาล 1",name:"ตามหาสัตว์",icon:"🐶",game:"tap",set:"animals",n:2,need:0},
+  {id:2,age:"อนุบาล 1",name:"สีสันสดใส",icon:"🎨",game:"tap",set:"colors",n:2,need:5},
+  {id:3,age:"อนุบาล 2",name:"ตลาดผลไม้",icon:"🍎",game:"tap",set:"fruits",n:3,need:10},
+  {id:4,age:"อนุบาล 2",name:"นับเลขกัน",icon:"🔢",game:"count",set:"numbers",n:3,need:15},
+  {id:8,age:"อนุบาล 2",name:"บรื้นๆ ยานพาหนะ",icon:"🚗",game:"tap",set:"vehicles",n:3,need:18},
+  {id:9,age:"อนุบาล 2",name:"ช้อปปิ้งใส่ตะกร้า",icon:"🧺",game:"basket",set:"fruits",need:21},
+  {id:5,age:"อนุบาล 3",name:"จับคู่ความจำ",icon:"🧠",game:"memory",set:"fruits",need:25},
+  {id:6,age:"อนุบาล 3",name:"ร่างกายของฉัน",icon:"👀",game:"tap",set:"body",n:4,need:30},
+  {id:10,age:"อนุบาล 3",name:"ครอบครัวของฉัน",icon:"👨‍👩‍👧",game:"tap",set:"family",n:4,need:34},
+  {id:7,age:"อนุบาล 3",name:"อารมณ์ของฉัน",icon:"😀",game:"tap",set:"feelings",n:4,need:38},
+  {id:11,age:"อนุบาล 3",name:"มื้ออร่อย",icon:"🍚",game:"memory",set:"food",need:42},
+  {id:12,age:"อนุบาล 3",name:"พูดตามโมโมะ",icon:"🎤",game:"talk",set:"animals",need:46},
+];
+const STICKERS=["🦄","🐼","🦁","🐸","🐵","🐧","🦋","🐳","🌈","🚀","🍦","🎂","🧸","👑","🎩","🕶️"];
+const PRICE=10;
+
+// ---------- State ----------
+const S = {stars:0, spent:0, stickers:[], stats:{}, lang:"en", hat:""};
+try{Object.assign(S,JSON.parse(localStorage.getItem("momo")||"{}"))}catch(e){}
+const save=()=>{try{localStorage.setItem("momo",JSON.stringify(S))}catch(e){}; $("#stars").textContent=S.stars-S.spent};
+// remember how each word goes, for the parent page
+function track(w,ok){const k=w[1],t=S.stats[k]||(S.stats[k]={ok:0,bad:0});ok?t.ok++:t.bad++;save()}
+const allWords=()=>Object.values(V).flat();
+const $=q=>document.querySelector(q), app=$("#app");
+const shuffle=a=>a.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+
+// ---------- Voice (Web Speech API, free, offline-capable) ----------
+function speak(text, lang){
+  if(!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang = lang==="zh"?"zh-CN":lang==="th"?"th-TH":"en-US";
+  u.rate = 0.8; u.pitch = 1.3;
+  speechSynthesis.speak(u);
+}
+const word=w=>S.lang==="zh"?w[2]:w[1];
+const label=w=>S.lang==="zh"?`${w[2]}<br><small>${w[3]}</small>`:w[1];
+function cheer(ok){
+  const p=document.createElement("div");p.className="pop";p.textContent=ok?"🌟":"🤔";
+  document.body.appendChild(p);setTimeout(()=>p.remove(),1000);
+  if(ok) speak(S.lang==="zh"?"很好!":"Great job!",S.lang); else speak(S.lang==="zh"?"再试试":"Try again",S.lang);
+}
+
+// ---------- Home ----------
+function home(){
+  app.innerHTML=`
+    <div class="momo">🐰${S.hat}</div>
+    <div class="say">สวัสดี! เล่นกับโมโมะกันนะ</div>
+    <div class="lang"><button class="btn" id="book">📒 สมุดสติกเกอร์</button><button class="btn" id="par">👪 ผู้ปกครอง</button></div>
+    <div class="lang">
+      <button class="btn ${S.lang==="en"?"on":""}" data-l="en">🇬🇧 English</button>
+      <button class="btn ${S.lang==="zh"?"on":""}" data-l="zh">🇨🇳 中文</button>
+    </div>
+    <div class="grid">${LEVELS.map(l=>`
+      <button class="btn ${S.stars<l.need?"locked":""}" data-id="${l.id}">
+        <span class="e">${S.stars<l.need?"🔒":l.icon}</span>${l.name}<br><small>${l.age}${S.stars<l.need?` · ⭐${l.need}`:""}</small>
+      </button>`).join("")}
+    </div>
+    <div class="parent">คำแนะนำผู้ปกครอง: เล่นวันละ 10–15 นาที และพูดตามไปพร้อมกับลูก 💕</div>`;
+  app.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{S.lang=b.dataset.l;save();home()});
+  app.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>{
+    const l=LEVELS.find(x=>x.id==b.dataset.id);
+    if(S.stars<l.need){speak("เก็บดาวเพิ่มอีกนิดนะ","th");return}
+    ({tap,count,memory,basket,talk})[l.game](l,0);
+  });
+  $("#book").onclick=book;$("#par").onclick=parentGate;
+}
+const bar=(l,r)=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+  <button class="btn back" id="back">🏠</button><b>${l.icon} ${l.name}</b><span>${"🟢".repeat(r)}${"⚪".repeat(5-r)}</span></div>`;
+const bindBack=()=>$("#back").onclick=()=>{speechSynthesis?.cancel();home()};
+function next(l,round,fn){
+  if(round+1>=5){S.stars+=3;save();speak(S.lang==="zh"?"太棒了!":"Hooray! You did it!",S.lang);
+    app.innerHTML=`<div class="momo">🎉🐰🎉</div><div class="prompt">เก่งมาก! +3 ⭐</div>
+    <div class="grid"><button class="btn" id="again"><span class="e">🔁</span>เล่นอีก</button><button class="btn" id="h"><span class="e">🏠</span>หน้าแรก</button></div>`;
+    $("#again").onclick=()=>fn(l,0);$("#h").onclick=home;}
+  else setTimeout(()=>fn(l,round+1),900);
+}
+
+// ---------- Game 1: Listen & Tap ----------
+function tap(l,round){
+  const opts=shuffle(V[l.set]).slice(0,l.n), ans=opts[Math.floor(Math.random()*opts.length)];
+  app.innerHTML=bar(l,round)+`<div class="prompt">🔊 <button class="btn" id="rep">ฟังอีกครั้ง</button></div>
+    <div class="choices">${opts.map((o,i)=>`<button class="btn" data-i="${i}"><span class="e">${o[0]}</span></button>`).join("")}</div>`;
+  bindBack();const say=()=>speak(word(ans),S.lang);say();$("#rep").onclick=say;
+  app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
+    const o=opts[b.dataset.i];
+    if(o===ans){b.classList.add("ok");b.innerHTML+=label(o);S.stars++;track(ans,1);cheer(true);next(l,round,tap)}
+    else{track(ans,0);b.classList.add("no");setTimeout(()=>b.classList.remove("no"),400);cheer(false);setTimeout(say,900)}
+  });
+}
+
+// ---------- Game 2: Counting ----------
+function count(l,round){
+  const pool=V.numbers.slice(0,round<2?5:10), ans=pool[Math.floor(Math.random()*pool.length)];
+  const items=["🍎","🐥","⭐","🎈","🚗"][round];
+  const opts=shuffle([ans,...shuffle(pool.filter(x=>x!==ans)).slice(0,l.n-1)]);
+  app.innerHTML=bar(l,round)+`<div class="prompt" style="font-size:2.6rem;line-height:1.3">${items.repeat(ans[0])}</div>
+    <div class="say">มีกี่อัน? ${S.lang==="zh"?"有几个?":"How many?"}</div>
+    <div class="choices" style="grid-template-columns:repeat(3,1fr)">${opts.map((o,i)=>`<button class="btn" data-i="${i}"><span class="e">${o[0]}</span></button>`).join("")}</div>`;
+  bindBack();speak(S.lang==="zh"?"有几个?":"How many?",S.lang);
+  app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
+    const o=opts[b.dataset.i]; speak(word(o),S.lang);
+    if(o===ans){b.classList.add("ok");S.stars++;track(ans,1);setTimeout(()=>cheer(true),700);next(l,round,count)}
+    else{track(ans,0);b.classList.add("no");setTimeout(()=>b.classList.remove("no"),400)}
+  });
+}
+
+// ---------- Game 3: Memory Match (picture ↔ word) ----------
+function memory(l){
+  const picks=shuffle(V[l.set]).slice(0,4);
+  const cards=shuffle(picks.flatMap(w=>[{w,t:w[0]},{w,t:S.lang==="zh"?w[2]:w[1],txt:1}]));
+  let open=[],done=0,lock=false;
+  app.innerHTML=bar(l,0).replace(/<span>.*<\/span><\/div>$/,"<span></span></div>")+
+    `<div class="say">จับคู่ภาพกับคำศัพท์</div><div class="grid mem">${cards.map((c,i)=>`<button class="btn hid" data-i="${i}" style="${c.txt?"font-size:1.2rem":""}">${c.t}</button>`).join("")}</div>`;
+  bindBack();
+  app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
+    if(lock||!b.classList.contains("hid"))return;
+    const c=cards[b.dataset.i];b.classList.remove("hid");speak(word(c.w),S.lang);open.push([b,c]);
+    if(open.length===2){lock=true;const[[b1,c1],[b2,c2]]=open;
+      setTimeout(()=>{
+        if(c1.w===c2.w){b1.classList.add("ok");b2.classList.add("ok");S.stars++;track(c1.w,1);cheer(true);
+          if(++done===4){open=[];lock=false;next(l,4,memory);return}}
+        else{b1.classList.add("hid");b2.classList.add("hid")}
+        open=[];lock=false;},900);}
+  });
+}
+
+// ---------- Game 4: Shopping Basket ("put 3 apples in") ----------
+function basket(l,round){
+  const want=shuffle(V[l.set])[0], n=1+Math.floor(Math.random()*(round<2?3:5));
+  const shelf=shuffle([...Array(n+2).fill(want),...shuffle(V[l.set].filter(x=>x!==want)).slice(0,4)]);
+  const ask=()=>speak(S.lang==="zh"?`请放${V.numbers[n-1][2]}个${want[2]}`:`Put ${V.numbers[n-1][1]} ${want[1]}${n>1&&want[1]!=="grapes"?"s":""} in the basket`,S.lang);
+  let got=0;
+  app.innerHTML=bar(l,round)+`<div class="prompt">🔊 <button class="btn" id="rep">${n} × ${want[0]}</button></div>
+    <div class="grid" style="grid-template-columns:repeat(4,1fr)">${shelf.map((f,i)=>`<button class="btn" data-i="${i}" style="font-size:2.6rem;padding:10px">${f[0]}</button>`).join("")}</div>
+    <div class="prompt" style="font-size:3rem;min-height:4rem">🧺 <span id="bk"></span></div>`;
+  bindBack();ask();$("#rep").onclick=ask;
+  app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
+    if(got>=n)return;const f=shelf[b.dataset.i];
+    if(f!==want){track(want,0);b.classList.add("no");speak(word(f),S.lang);setTimeout(()=>b.classList.remove("no"),400);return}
+    b.style.visibility="hidden";got++;$("#bk").textContent+=f[0];speak(V.numbers[got-1][S.lang==="zh"?2:1],S.lang);
+    if(got===n){S.stars++;track(want,1);setTimeout(()=>cheer(true),700);next(l,round,basket)}
+  });
+}
+
+// ---------- Game 5: Say it! (speech recognition) ----------
+function talk(l,round){
+  const w=shuffle(V[l.set])[0], SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  app.innerHTML=bar(l,round)+`<div class="prompt" style="font-size:6rem">${w[0]}</div>
+    <div class="prompt">${label(w)}</div>
+    <div class="grid"><button class="btn" id="rep"><span class="e">🔊</span>ฟัง</button>
+    <button class="btn" id="mic" style="background:var(--yellow)"><span class="e">🎤</span>${SR?"กดแล้วพูด":"พูดตามแล้วกด ✔"}</button></div>
+    <div class="say" id="heard"></div>`;
+  bindBack();const say=()=>speak(word(w),S.lang);say();$("#rep").onclick=say;
+  const win=()=>{S.stars++;track(w,1);cheer(true);next(l,round,talk)};
+  $("#mic").onclick=()=>{
+    if(!SR){win();return}   // no mic support: parent listens and taps
+    const r=new SR();r.lang=S.lang==="zh"?"zh-CN":"en-US";r.maxAlternatives=5;
+    $("#heard").textContent="👂 กำลังฟัง...";
+    r.onresult=e=>{const alts=[...e.results[0]].map(a=>a.transcript.toLowerCase().replace(/\s/g,""));
+      const target=word(w).toLowerCase().replace(/\s/g,"");
+      // kids' pronunciation is fuzzy: accept any alternative containing the word
+      if(alts.some(a=>a.includes(target)||target.includes(a)&&a.length>1))win();
+      else{$("#heard").textContent=`ได้ยินว่า "${alts[0]}" ลองอีกครั้งนะ`;track(w,0);cheer(false)}};
+    r.onerror=()=>{$("#heard").innerHTML=`ไมค์ใช้ไม่ได้ <button class="btn" id="skip">✔ พูดแล้ว</button>`;$("#skip").onclick=win};
+    r.start();
+  };
+}
+
+// ---------- Sticker book (spend stars) ----------
+function book(){
+  const free=S.stars-S.spent;
+  app.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><button class="btn back" id="back">🏠</button><b>📒 สมุดสติกเกอร์</b><span>⭐ ${free}</span></div>
+    <div class="say">แลกสติกเกอร์ ${PRICE} ⭐ · แตะสติกเกอร์ที่ได้แล้วเพื่อให้โมโมะใส่ 👑</div>
+    <div class="grid" style="grid-template-columns:repeat(4,1fr)">${STICKERS.map(s=>{const has=S.stickers.includes(s);
+      return `<button class="btn ${has?"":"locked"}" data-s="${s}" style="font-size:2.6rem;padding:12px">${has?s:"❔"}</button>`}).join("")}</div>
+    <div class="grid" style="margin-top:16px"><button class="btn" id="buy" style="background:var(--yellow)"><span class="e">🎁</span>สุ่มสติกเกอร์ (${PRICE}⭐)</button></div>`;
+  bindBack();
+  $("#buy").onclick=()=>{const left=STICKERS.filter(s=>!S.stickers.includes(s));
+    if(!left.length){speak("ครบแล้ว เก่งมาก","th");return}
+    if(free<PRICE){speak("เก็บดาวเพิ่มอีกนิดนะ","th");return}
+    const s=shuffle(left)[0];S.spent+=PRICE;S.stickers.push(s);save();
+    const p=document.createElement("div");p.className="pop";p.textContent=s;document.body.appendChild(p);setTimeout(()=>p.remove(),1000);
+    speak("Yay!","en");book();};
+  app.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{if(S.stickers.includes(b.dataset.s)){S.hat=S.hat===b.dataset.s?"":b.dataset.s;save();speak("โมโมะชอบมาก","th")}});
+}
+
+// ---------- Parent page (with grown-up gate) ----------
+function parentGate(){
+  const a=3+Math.floor(Math.random()*6),b=4+Math.floor(Math.random()*5),opts=shuffle([a+b,a+b+2,a+b-1]);
+  app.innerHTML=`<button class="btn back" id="back">🏠</button><div class="prompt">สำหรับผู้ใหญ่: ${a} + ${b} = ?</div>
+    <div class="choices" style="grid-template-columns:repeat(3,1fr)">${opts.map(o=>`<button class="btn" data-o="${o}"><span class="e">${o}</span></button>`).join("")}</div>`;
+  bindBack();app.querySelectorAll("[data-o]").forEach(x=>x.onclick=()=>x.dataset.o==a+b?parent():home());
+}
+function parent(){
+  const rows=allWords().filter(w=>S.stats[w[1]]).map(w=>({w,...S.stats[w[1]]}));
+  const learned=rows.filter(r=>r.ok>=3&&r.ok>r.bad*2), hard=rows.filter(r=>r.bad>=2&&!learned.includes(r)).sort((a,b)=>b.bad-a.bad);
+  const chip=r=>`<span class="btn" style="display:inline-block;padding:8px 12px;margin:4px;font-size:1rem">${r.w[0]} ${r.w[1]} · ${r.w[2]} <small>✔${r.ok} ✘${r.bad}</small></span>`;
+  app.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><button class="btn back" id="back">🏠</button><b>👪 รายงานสำหรับผู้ปกครอง</b><span></span></div>
+    <p>⭐ ดาวทั้งหมด <b>${S.stars}</b> · สติกเกอร์ <b>${S.stickers.length}/${STICKERS.length}</b> · ฝึกไปแล้ว <b>${rows.length}/${allWords().length}</b> คำ</p>
+    <h3>✅ คำที่รู้แล้ว (${learned.length})</h3><div>${learned.map(chip).join("")||"<i>ยังไม่มี — เล่นต่ออีกนิดนะ</i>"}</div>
+    <h3>💪 คำที่ควรฝึกเพิ่ม (${hard.length})</h3><div>${hard.map(chip).join("")||"<i>ยังไม่มีคำที่ผิดบ่อย 👍</i>"}</div>
+    <p class="parent">เคล็ดลับ: ชี้ของจริงในบ้านแล้วถามลูกด้วยคำในกลุ่ม "ควรฝึกเพิ่ม" จะจำได้เร็วขึ้น</p>
+    <button class="btn" id="reset" style="font-size:.9rem">🗑 ล้างข้อมูลทั้งหมด</button>`;
+  bindBack();$("#reset").onclick=()=>{if(confirm("ล้างดาว สติกเกอร์ และสถิติทั้งหมด?")){Object.assign(S,{stars:0,spent:0,stickers:[],stats:{},hat:""});save();home()}};
+}
+
+save();home();
+if(window.speechSynthesis) speechSynthesis.getVoices();
+if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
