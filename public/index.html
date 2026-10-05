@@ -3,16 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="theme-color" content="#ff8fab">
 <title>Momo</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
 <style>
-:root{--bg:#fff6e9;--card:#fff;--pink:#ff8fab;--yellow:#ffd166;--green:#06d6a0;--blue:#4cc9f0;--ink:#5a3e36}
+:root{--bg:#fff6e9;--card:#fff;--pink:#ff8fab;--yellow:#ffd166;--green:#06d6a0;--blue:#4cc9f0;--purple:#b388ff;--ink:#5a3e36}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
 body{margin:0;font-family:"Comic Sans MS","Chalkboard SE",system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center}
 header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 16px}
 h1{margin:0;font-size:2rem;color:var(--pink)}
 .stars{font-size:1.4rem;background:var(--card);padding:6px 14px;border-radius:20px;box-shadow:0 3px 0 #0001}
-main{width:100%;max-width:720px;padding:0 16px 24px;flex:1}
+main{width:100%;max-width:760px;padding:0 16px 24px;flex:1}
 .momo{font-size:5rem;text-align:center;animation:bob 2s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(-10px)}}
 .say{text-align:center;font-size:1.3rem;margin:4px 0 16px}
@@ -21,29 +23,41 @@ main{width:100%;max-width:720px;padding:0 16px 24px;flex:1}
 .btn:active{transform:translateY(4px);box-shadow:0 2px 0 #0002}
 .btn .e{font-size:3rem;display:block}
 .btn.locked{opacity:.45}
-.lang{display:flex;gap:10px;justify-content:center;margin-bottom:16px}
-.lang .btn{padding:10px 18px}
-.lang .on{background:var(--yellow)}
+.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+.row .btn{padding:10px 18px}
+.on{background:var(--yellow)!important}
 .choices{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:10px}
-.choices .btn .e{font-size:4.5rem}
+.choices.c3{grid-template-columns:repeat(3,1fr)}
+.choices .btn .e{font-size:4rem}
 .prompt{font-size:2rem;text-align:center;margin:10px 0}
+.big{font-size:5.5rem;text-align:center;line-height:1.1}
+.shadow{filter:brightness(0);opacity:.75}
 .ok{background:var(--green)!important;color:#fff}
 .no{animation:shake .4s}
 @keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 .back{background:var(--blue);color:#fff;padding:10px 16px}
-.mem{grid-template-columns:repeat(4,1fr)}
-.mem .btn{min-height:90px;font-size:2.4rem;padding:8px}
+.mem .btn{min-height:84px;font-size:2.3rem;padding:6px}
 .mem .hid{background:var(--pink);color:transparent}
-.pop{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:8rem;pointer-events:none;animation:pop 1s forwards}
+.pop{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:8rem;pointer-events:none;animation:pop 1s forwards;z-index:9}
 @keyframes pop{0%{transform:scale(.2);opacity:0}30%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:0}}
-.parent{font-size:.9rem;opacity:.7;text-align:center;margin-top:20px}
+.note{font-size:.9rem;opacity:.7;text-align:center;margin-top:20px}
+.sky{position:relative;height:58vh;border-radius:24px;background:linear-gradient(#bde0fe,#e7f6ff);overflow:hidden}
+.balloon{position:absolute;bottom:-120px;font-size:3.4rem;background:none;border:0;cursor:pointer;animation:rise linear forwards;padding:0}
+.balloon::after{content:"";display:block;width:2px;height:30px;background:#9998;margin:-6px auto 0}
+@keyframes rise{to{transform:translateY(calc(-58vh - 140px))}}
+.lvl{position:relative;padding:14px 8px}
+.lvl .n{position:absolute;top:8px;left:12px;font-size:.9rem;opacity:.6}
+.lvl small{display:block;margin-top:4px}
+.seq{display:flex;gap:8px;justify-content:center;min-height:64px;font-size:2.6rem}
+.age .btn{padding:22px 10px}
+.age .btn .e{font-size:3.6rem}
 </style>
 </head>
 <body>
 <header><h1>🐰 Momo</h1><div class="stars">⭐ <span id="stars">0</span></div></header>
 <main id="app"></main>
 <script>
-// ---------- Data (vocab by age) ----------
+// ---------- Vocabulary: [emoji, English, Chinese, pinyin] ----------
 const V = {
   animals:[["🐶","dog","狗","gǒu"],["🐱","cat","猫","māo"],["🐟","fish","鱼","yú"],["🐦","bird","鸟","niǎo"],["🐷","pig","猪","zhū"],["🐮","cow","牛","niú"]],
   colors:[["🔴","red","红色","hóngsè"],["🔵","blue","蓝色","lánsè"],["🟡","yellow","黄色","huángsè"],["🟢","green","绿色","lǜsè"],["⚫","black","黑色","hēisè"],["⚪","white","白色","báisè"]],
@@ -53,220 +67,366 @@ const V = {
   vehicles:[["🚗","car","汽车","qìchē"],["🚌","bus","公共汽车","gōnggòng qìchē"],["🚲","bike","自行车","zìxíngchē"],["✈️","plane","飞机","fēijī"],["🚂","train","火车","huǒchē"],["⛵","boat","船","chuán"]],
   family:[["👨","dad","爸爸","bàba"],["👩","mom","妈妈","māma"],["👴","grandpa","爷爷","yéye"],["👵","grandma","奶奶","nǎinai"],["👦","brother","哥哥","gēge"],["👧","sister","姐姐","jiějie"]],
   food:[["🍚","rice","米饭","mǐfàn"],["🥛","milk","牛奶","niúnǎi"],["🍞","bread","面包","miànbāo"],["🥚","egg","鸡蛋","jīdàn"],["🍜","noodles","面条","miàntiáo"],["💧","water","水","shuǐ"]],
+  shapes:[["⭕","circle","圆形","yuánxíng"],["🔺","triangle","三角形","sānjiǎoxíng"],["🟥","square","正方形","zhèngfāngxíng"],["⭐","star","星星","xīngxing"],["❤️","heart","心形","xīnxíng"],["🌙","moon","月亮","yuèliang"]],
+  clothes:[["👕","shirt","衬衫","chènshān"],["👖","pants","裤子","kùzi"],["👗","dress","裙子","qúnzi"],["🧢","cap","帽子","màozi"],["🧦","socks","袜子","wàzi"],["👟","shoes","鞋子","xiézi"]],
   feelings:[["😀","happy","开心","kāixīn"],["😢","sad","难过","nánguò"],["😠","angry","生气","shēngqì"],["😴","sleepy","困","kùn"]],
 };
-// Levels: K1 (3-4) → K3 (5-6)
-const LEVELS = [
-  {id:1,age:"อนุบาล 1",name:"ตามหาสัตว์",icon:"🐶",game:"tap",set:"animals",n:2,need:0},
-  {id:2,age:"อนุบาล 1",name:"สีสันสดใส",icon:"🎨",game:"tap",set:"colors",n:2,need:5},
-  {id:3,age:"อนุบาล 2",name:"ตลาดผลไม้",icon:"🍎",game:"tap",set:"fruits",n:3,need:10},
-  {id:4,age:"อนุบาล 2",name:"นับเลขกัน",icon:"🔢",game:"count",set:"numbers",n:3,need:15},
-  {id:8,age:"อนุบาล 2",name:"บรื้นๆ ยานพาหนะ",icon:"🚗",game:"tap",set:"vehicles",n:3,need:18},
-  {id:9,age:"อนุบาล 2",name:"ช้อปปิ้งใส่ตะกร้า",icon:"🧺",game:"basket",set:"fruits",need:21},
-  {id:5,age:"อนุบาล 3",name:"จับคู่ความจำ",icon:"🧠",game:"memory",set:"fruits",need:25},
-  {id:6,age:"อนุบาล 3",name:"ร่างกายของฉัน",icon:"👀",game:"tap",set:"body",n:4,need:30},
-  {id:10,age:"อนุบาล 3",name:"ครอบครัวของฉัน",icon:"👨‍👩‍👧",game:"tap",set:"family",n:4,need:34},
-  {id:7,age:"อนุบาล 3",name:"อารมณ์ของฉัน",icon:"😀",game:"tap",set:"feelings",n:4,need:38},
-  {id:11,age:"อนุบาล 3",name:"มื้ออร่อย",icon:"🍚",game:"memory",set:"food",need:42},
-  {id:12,age:"อนุบาล 3",name:"พูดตามโมโมะ",icon:"🎤",game:"talk",set:"animals",need:46},
-];
-const STICKERS=["🦄","🐼","🦁","🐸","🐵","🐧","🦋","🐳","🌈","🚀","🍦","🎂","🧸","👑","🎩","🕶️"];
+const SETNAME={animals:"สัตว์",colors:"สี",fruits:"ผลไม้",numbers:"ตัวเลข",body:"ร่างกาย",vehicles:"ยานพาหนะ",family:"ครอบครัว",food:"อาหาร",shapes:"รูปทรง",clothes:"เสื้อผ้า",feelings:"อารมณ์"};
+
+// ---------- Difficulty by age ----------
+// n: choices · rounds · cnt: max count · pairs: memory pairs · speed: balloon seconds · seq: words to remember
+const AGES={
+  3:{label:"3 ขวบ",kg:"อนุบาล 1",icon:"🐣",n:2,rounds:4,cnt:3,pairs:3,speed:9,seq:1,pat:"AB"},
+  4:{label:"4 ขวบ",kg:"อนุบาล 1–2",icon:"🐥",n:3,rounds:5,cnt:5,pairs:4,speed:7,seq:2,pat:"AB"},
+  5:{label:"5 ขวบ",kg:"อนุบาล 2–3",icon:"🐤",n:4,rounds:5,cnt:10,pairs:5,speed:5.5,seq:3,pat:"AAB"},
+  6:{label:"6 ขวบ",kg:"อนุบาล 3",icon:"🦅",n:4,rounds:6,cnt:10,pairs:6,speed:4.5,seq:4,pat:"ABC"},
+};
+// "hard" levels push one step past the age baseline
+function diff(L){const d={...AGES[S.age]};if(L.hard){d.n=Math.min(6,d.n+1);d.speed*=.8;d.seq=Math.min(5,d.seq+1);d.cnt=Math.min(10,d.cnt+2);d.pairs=Math.min(6,d.pairs+1);d.pat=d.pat==="AB"?"AAB":"ABC"}return d}
+
+// ---------- Game catalog ----------
+const GAMES={
+  tap:{t:"ฟังแล้วแตะ",i:"👂"}, shadow:{t:"เงาของใคร",i:"🌑"}, pop:{t:"ลูกโป่งลอยฟ้า",i:"🎈"},
+  memory:{t:"จับคู่ความจำ",i:"🧠",once:1}, count:{t:"นับเลข",i:"🔢"}, basket:{t:"ใส่ตะกร้า",i:"🧺"},
+  odd:{t:"อันไหนต่างพวก",i:"🔍"}, pattern:{t:"เรียงตามแบบ",i:"🧩"}, letter:{t:"ตัวอักษรแรก",i:"🔤"},
+  seq:{t:"จำให้ได้",i:"🦜"}, add:{t:"บวกเลข",i:"➕"}, talk:{t:"พูดตามโมโมะ",i:"🎤"},
+};
+const P=(game,set,hard)=>({game,set,hard});
+const PATHS={
+  3:[P("tap","animals"),P("shadow","animals"),P("tap","colors"),P("pop","fruits"),P("tap","fruits"),P("memory","animals"),
+     P("shadow","vehicles"),P("count","numbers"),P("tap","body"),P("pop","animals"),P("tap","family"),P("memory","fruits"),
+     P("shadow","food"),P("pop","colors"),P("tap","vehicles"),P("tap","animals",1)],
+  4:[P("tap","animals"),P("count","numbers"),P("pattern","colors"),P("odd","fruits"),P("basket","fruits"),P("shadow","vehicles"),
+     P("pop","vehicles"),P("memory","food"),P("tap","feelings"),P("odd","animals"),P("tap","shapes"),P("pattern","fruits"),
+     P("seq","animals"),P("shadow","clothes"),P("pop","shapes",1),P("talk","animals"),P("memory","family",1),P("count","numbers",1)],
+  5:[P("tap","body"),P("odd","food"),P("letter","animals"),P("seq","animals"),P("memory","family"),P("count","numbers"),
+     P("basket","fruits"),P("pattern","shapes"),P("pop","food"),P("letter","fruits"),P("talk","fruits"),P("tap","clothes"),
+     P("seq","colors"),P("memory","vehicles"),P("add","numbers"),P("odd","vehicles",1),P("letter","body"),P("pop","clothes",1),
+     P("talk","family"),P("pattern","animals",1)],
+  6:[P("letter","vehicles"),P("seq","fruits"),P("add","numbers"),P("odd","food"),P("pattern","animals"),P("memory","food"),
+     P("talk","family"),P("letter","food"),P("pop","clothes"),P("seq","body"),P("basket","fruits",1),P("tap","feelings",1),
+     P("letter","clothes"),P("talk","vehicles"),P("memory","clothes",1),P("add","numbers",1),P("odd","shapes",1),P("seq","family",1),
+     P("pattern","shapes",1),P("letter","shapes",1),P("pop","vehicles",1),P("talk","food",1)],
+};
+const STICKERS=["🦄","🐼","🦁","🐸","🐵","🐧","🦋","🐳","🌈","🚀","🍦","🎂","🧸","👑","🎩","🕶️","🦖","🐙","🌻","🍩"];
 const PRICE=10;
 
 // ---------- State ----------
-const S = {stars:0, spent:0, stickers:[], stats:{}, lang:"en", hat:""};
+const S={stars:0,spent:0,stickers:[],stats:{},done:{},lang:"en",hat:"",age:0};
 try{Object.assign(S,JSON.parse(localStorage.getItem("momo")||"{}"))}catch(e){}
-const save=()=>{try{localStorage.setItem("momo",JSON.stringify(S))}catch(e){}; $("#stars").textContent=S.stars-S.spent};
-// remember how each word goes, for the parent page
+const $=q=>document.querySelector(q), app=$("#app");
+const save=()=>{try{localStorage.setItem("momo",JSON.stringify(S))}catch(e){};$("#stars").textContent=S.stars-S.spent};
+const shuffle=a=>a.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 function track(w,ok){const k=w[1],t=S.stats[k]||(S.stats[k]={ok:0,bad:0});ok?t.ok++:t.bad++;save()}
 const allWords=()=>Object.values(V).flat();
-const $=q=>document.querySelector(q), app=$("#app");
-const shuffle=a=>a.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+let timers=[];const later=(f,ms)=>timers.push(setTimeout(f,ms));
+const every=(f,ms)=>timers.push(setInterval(f,ms));
+const clearTimers=()=>{timers.forEach(t=>{clearTimeout(t);clearInterval(t)});timers=[]};
 
-// ---------- Voice (Web Speech API, free, offline-capable) ----------
-function speak(text, lang){
-  if(!window.speechSynthesis) return;
-  speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang = lang==="zh"?"zh-CN":lang==="th"?"th-TH":"en-US";
-  u.rate = 0.8; u.pitch = 1.3;
-  speechSynthesis.speak(u);
+// ---------- Voice ----------
+const LC={zh:"zh-CN",th:"th-TH",en:"en-US"};
+function speak(text,lang=S.lang,keep){
+  if(!window.speechSynthesis)return;
+  if(!keep)speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(String(text));u.lang=LC[lang];u.rate=.8;u.pitch=1.3;speechSynthesis.speak(u);
 }
 const word=w=>S.lang==="zh"?w[2]:w[1];
 const label=w=>S.lang==="zh"?`${w[2]}<br><small>${w[3]}</small>`:w[1];
+const T=(en,zh)=>S.lang==="zh"?zh:en;
 function cheer(ok){
-  const p=document.createElement("div");p.className="pop";p.textContent=ok?"🌟":"🤔";
+  const p=document.createElement("div");p.className="pop";p.textContent=ok?pick(["🌟","🎉","💖","👏"]):"🤔";
   document.body.appendChild(p);setTimeout(()=>p.remove(),1000);
-  if(ok) speak(S.lang==="zh"?"很好!":"Great job!",S.lang); else speak(S.lang==="zh"?"再试试":"Try again",S.lang);
+  if(!ok)speak(T("Try again","再试试"));
+}
+const shake=b=>{b.classList.add("no");setTimeout(()=>b.classList.remove("no"),400)};
+
+// ---------- Age picker ----------
+function agePick(){
+  clearTimers();
+  app.innerHTML=`<div class="momo">🐰</div><div class="say">น้องอายุเท่าไหร่จ๊ะ?<br><small>เลือกเพื่อปรับความยากให้พอดี (เปลี่ยนได้ทีหลัง)</small></div>
+   <div class="grid age" style="grid-template-columns:repeat(2,1fr)">${Object.entries(AGES).map(([a,g])=>
+     `<button class="btn ${S.age==a?"on":""}" data-a="${a}"><span class="e">${g.icon}</span><b style="font-size:1.6rem">${g.label}</b><small style="display:block">${g.kg}</small></button>`).join("")}</div>`;
+  app.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{S.age=+b.dataset.a;save();speak(`${b.dataset.a} ขวบ`,"th");home()});
 }
 
-// ---------- Home ----------
+// ---------- Home / level map ----------
+const levelKey=i=>`${S.age}-${i}`;
+const unlocked=i=>i===0||S.done[levelKey(i-1)];
 function home(){
+  clearTimers();
+  if(!S.age)return agePick();
+  const path=PATHS[S.age], g=AGES[S.age], cleared=path.filter((_,i)=>S.done[levelKey(i)]).length;
   app.innerHTML=`
     <div class="momo">🐰${S.hat}</div>
-    <div class="say">สวัสดี! เล่นกับโมโมะกันนะ</div>
-    <div class="lang"><button class="btn" id="book">📒 สมุดสติกเกอร์</button><button class="btn" id="par">👪 ผู้ปกครอง</button></div>
-    <div class="lang">
+    <div class="row">
+      <button class="btn" id="age">${g.icon} ${g.label} ✏️</button>
       <button class="btn ${S.lang==="en"?"on":""}" data-l="en">🇬🇧 English</button>
       <button class="btn ${S.lang==="zh"?"on":""}" data-l="zh">🇨🇳 中文</button>
     </div>
-    <div class="grid">${LEVELS.map(l=>`
-      <button class="btn ${S.stars<l.need?"locked":""}" data-id="${l.id}">
-        <span class="e">${S.stars<l.need?"🔒":l.icon}</span>${l.name}<br><small>${l.age}${S.stars<l.need?` · ⭐${l.need}`:""}</small>
-      </button>`).join("")}
+    <div class="row"><button class="btn" id="book">📒 สติกเกอร์</button><button class="btn" id="par">👪 ผู้ปกครอง</button></div>
+    <div class="say">ผ่านแล้ว ${cleared}/${path.length} ด่าน</div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${path.map((L,i)=>{
+      const st=S.done[levelKey(i)]||0, open=unlocked(i);
+      return `<button class="btn lvl ${open?"":"locked"}" data-i="${i}" ${st?'style="background:#fff3c4"':""}>
+        <span class="n">${i+1}${L.hard?" 🔥":""}</span>
+        <span class="e">${open?(GAMES[L.game].i):"🔒"}</span>${GAMES[L.game].t}
+        <small>${SETNAME[L.set]} ${st?"⭐".repeat(st):open?"":""}</small></button>`}).join("")}
     </div>
-    <div class="parent">คำแนะนำผู้ปกครอง: เล่นวันละ 10–15 นาที และพูดตามไปพร้อมกับลูก 💕</div>`;
+    <div class="note">คำแนะนำผู้ปกครอง: เล่นวันละ 10–15 นาที และพูดตามไปพร้อมกับลูก 💕 · ด่าน 🔥 = ท้าทายขึ้น</div>`;
   app.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{S.lang=b.dataset.l;save();home()});
-  app.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>{
-    const l=LEVELS.find(x=>x.id==b.dataset.id);
-    if(S.stars<l.need){speak("เก็บดาวเพิ่มอีกนิดนะ","th");return}
-    ({tap,count,memory,basket,talk})[l.game](l,0);
-  });
-  $("#book").onclick=book;$("#par").onclick=parentGate;
-}
-const bar=(l,r)=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-  <button class="btn back" id="back">🏠</button><b>${l.icon} ${l.name}</b><span>${"🟢".repeat(r)}${"⚪".repeat(5-r)}</span></div>`;
-const bindBack=()=>$("#back").onclick=()=>{speechSynthesis?.cancel();home()};
-function next(l,round,fn){
-  if(round+1>=5){S.stars+=3;save();speak(S.lang==="zh"?"太棒了!":"Hooray! You did it!",S.lang);
-    app.innerHTML=`<div class="momo">🎉🐰🎉</div><div class="prompt">เก่งมาก! +3 ⭐</div>
-    <div class="grid"><button class="btn" id="again"><span class="e">🔁</span>เล่นอีก</button><button class="btn" id="h"><span class="e">🏠</span>หน้าแรก</button></div>`;
-    $("#again").onclick=()=>fn(l,0);$("#h").onclick=home;}
-  else setTimeout(()=>fn(l,round+1),900);
-}
-
-// ---------- Game 1: Listen & Tap ----------
-function tap(l,round){
-  const opts=shuffle(V[l.set]).slice(0,l.n), ans=opts[Math.floor(Math.random()*opts.length)];
-  app.innerHTML=bar(l,round)+`<div class="prompt">🔊 <button class="btn" id="rep">ฟังอีกครั้ง</button></div>
-    <div class="choices">${opts.map((o,i)=>`<button class="btn" data-i="${i}"><span class="e">${o[0]}</span></button>`).join("")}</div>`;
-  bindBack();const say=()=>speak(word(ans),S.lang);say();$("#rep").onclick=say;
   app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
-    const o=opts[b.dataset.i];
-    if(o===ans){b.classList.add("ok");b.innerHTML+=label(o);S.stars++;track(ans,1);cheer(true);next(l,round,tap)}
-    else{track(ans,0);b.classList.add("no");setTimeout(()=>b.classList.remove("no"),400);cheer(false);setTimeout(say,900)}
+    const i=+b.dataset.i;
+    if(!unlocked(i)){speak("ผ่านด่านก่อนหน้าก่อนนะ","th");return}
+    run(i);
   });
+  $("#age").onclick=agePick;$("#book").onclick=book;$("#par").onclick=parentGate;
 }
 
-// ---------- Game 2: Counting ----------
-function count(l,round){
-  const pool=V.numbers.slice(0,round<2?5:10), ans=pool[Math.floor(Math.random()*pool.length)];
-  const items=["🍎","🐥","⭐","🎈","🚗"][round];
-  const opts=shuffle([ans,...shuffle(pool.filter(x=>x!==ans)).slice(0,l.n-1)]);
-  app.innerHTML=bar(l,round)+`<div class="prompt" style="font-size:2.6rem;line-height:1.3">${items.repeat(ans[0])}</div>
-    <div class="say">มีกี่อัน? ${S.lang==="zh"?"有几个?":"How many?"}</div>
-    <div class="choices" style="grid-template-columns:repeat(3,1fr)">${opts.map((o,i)=>`<button class="btn" data-i="${i}"><span class="e">${o[0]}</span></button>`).join("")}</div>`;
-  bindBack();speak(S.lang==="zh"?"有几个?":"How many?",S.lang);
-  app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
-    const o=opts[b.dataset.i]; speak(word(o),S.lang);
-    if(o===ans){b.classList.add("ok");S.stars++;track(ans,1);setTimeout(()=>cheer(true),700);next(l,round,count)}
-    else{track(ans,0);b.classList.add("no");setTimeout(()=>b.classList.remove("no"),400)}
-  });
-}
-
-// ---------- Game 3: Memory Match (picture ↔ word) ----------
-function memory(l){
-  const picks=shuffle(V[l.set]).slice(0,4);
-  const cards=shuffle(picks.flatMap(w=>[{w,t:w[0]},{w,t:S.lang==="zh"?w[2]:w[1],txt:1}]));
-  let open=[],done=0,lock=false;
-  app.innerHTML=bar(l,0).replace(/<span>.*<\/span><\/div>$/,"<span></span></div>")+
-    `<div class="say">จับคู่ภาพกับคำศัพท์</div><div class="grid mem">${cards.map((c,i)=>`<button class="btn hid" data-i="${i}" style="${c.txt?"font-size:1.2rem":""}">${c.t}</button>`).join("")}</div>`;
-  bindBack();
-  app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
-    if(lock||!b.classList.contains("hid"))return;
-    const c=cards[b.dataset.i];b.classList.remove("hid");speak(word(c.w),S.lang);open.push([b,c]);
-    if(open.length===2){lock=true;const[[b1,c1],[b2,c2]]=open;
-      setTimeout(()=>{
-        if(c1.w===c2.w){b1.classList.add("ok");b2.classList.add("ok");S.stars++;track(c1.w,1);cheer(true);
-          if(++done===4){open=[];lock=false;next(l,4,memory);return}}
-        else{b1.classList.add("hid");b2.classList.add("hid")}
-        open=[];lock=false;},900);}
-  });
-}
-
-// ---------- Game 4: Shopping Basket ("put 3 apples in") ----------
-function basket(l,round){
-  const want=shuffle(V[l.set])[0], n=1+Math.floor(Math.random()*(round<2?3:5));
-  const shelf=shuffle([...Array(n+2).fill(want),...shuffle(V[l.set].filter(x=>x!==want)).slice(0,4)]);
-  const ask=()=>speak(S.lang==="zh"?`请放${V.numbers[n-1][2]}个${want[2]}`:`Put ${V.numbers[n-1][1]} ${want[1]}${n>1&&want[1]!=="grapes"?"s":""} in the basket`,S.lang);
-  let got=0;
-  app.innerHTML=bar(l,round)+`<div class="prompt">🔊 <button class="btn" id="rep">${n} × ${want[0]}</button></div>
-    <div class="grid" style="grid-template-columns:repeat(4,1fr)">${shelf.map((f,i)=>`<button class="btn" data-i="${i}" style="font-size:2.6rem;padding:10px">${f[0]}</button>`).join("")}</div>
-    <div class="prompt" style="font-size:3rem;min-height:4rem">🧺 <span id="bk"></span></div>`;
-  bindBack();ask();$("#rep").onclick=ask;
-  app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
-    if(got>=n)return;const f=shelf[b.dataset.i];
-    if(f!==want){track(want,0);b.classList.add("no");speak(word(f),S.lang);setTimeout(()=>b.classList.remove("no"),400);return}
-    b.style.visibility="hidden";got++;$("#bk").textContent+=f[0];speak(V.numbers[got-1][S.lang==="zh"?2:1],S.lang);
-    if(got===n){S.stars++;track(want,1);setTimeout(()=>cheer(true),700);next(l,round,basket)}
-  });
-}
-
-// ---------- Game 5: Say it! (speech recognition) ----------
-function talk(l,round){
-  const w=shuffle(V[l.set])[0], SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  app.innerHTML=bar(l,round)+`<div class="prompt" style="font-size:6rem">${w[0]}</div>
-    <div class="prompt">${label(w)}</div>
-    <div class="grid"><button class="btn" id="rep"><span class="e">🔊</span>ฟัง</button>
-    <button class="btn" id="mic" style="background:var(--yellow)"><span class="e">🎤</span>${SR?"กดแล้วพูด":"พูดตามแล้วกด ✔"}</button></div>
-    <div class="say" id="heard"></div>`;
-  bindBack();const say=()=>speak(word(w),S.lang);say();$("#rep").onclick=say;
-  const win=()=>{S.stars++;track(w,1);cheer(true);next(l,round,talk)};
-  $("#mic").onclick=()=>{
-    if(!SR){win();return}   // no mic support: parent listens and taps
-    const r=new SR();r.lang=S.lang==="zh"?"zh-CN":"en-US";r.maxAlternatives=5;
-    $("#heard").textContent="👂 กำลังฟัง...";
-    r.onresult=e=>{const alts=[...e.results[0]].map(a=>a.transcript.toLowerCase().replace(/\s/g,""));
-      const target=word(w).toLowerCase().replace(/\s/g,"");
-      // kids' pronunciation is fuzzy: accept any alternative containing the word
-      if(alts.some(a=>a.includes(target)||target.includes(a)&&a.length>1))win();
-      else{$("#heard").textContent=`ได้ยินว่า "${alts[0]}" ลองอีกครั้งนะ`;track(w,0);cheer(false)}};
-    r.onerror=()=>{$("#heard").innerHTML=`ไมค์ใช้ไม่ได้ <button class="btn" id="skip">✔ พูดแล้ว</button>`;$("#skip").onclick=win};
-    r.start();
+// ---------- Level runner (shared by every game) ----------
+function run(idx){
+  clearTimers();
+  const L=PATHS[S.age][idx], G=GAMES[L.game], d=diff(L), rounds=G.once?1:d.rounds;
+  let r=0, miss=0, busy=false;
+  const ctx={L,d,set:V[L.set],
+    ok(w){if(busy)return;busy=true;if(w)track(w,1);S.stars++;save();cheer(true);
+      later(()=>{busy=false;r++;r>=rounds?finish():step()},1100)},
+    bad(w){miss++;if(w)track(w,0);cheer(false)},
+    head(sub=""){return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">
+      <button class="btn back" id="back">🏠</button><b>${G.i} ${G.t} · ${SETNAME[L.set]}</b>
+      <span>${rounds>1?"🟢".repeat(r)+"⚪".repeat(rounds-r):""}</span></div>${sub}`},
+    bind(){$("#back").onclick=()=>{speechSynthesis?.cancel();home()}},
   };
+  const step=()=>{clearTimers();GAME_FN[L.game](ctx)};
+  function finish(){
+    clearTimers();
+    const st=miss===0?3:miss<=2?2:1, k=levelKey(idx);
+    S.done[k]=Math.max(S.done[k]||0,st);S.stars+=st;save();
+    speak(T("Hooray! You did it!","太棒了!"));
+    const hasNext=idx+1<PATHS[S.age].length;
+    app.innerHTML=`<div class="momo">🎉🐰🎉</div><div class="prompt" style="font-size:3rem">${"⭐".repeat(st)}${"☆".repeat(3-st)}</div>
+     <div class="prompt">เก่งมาก! +${st} ⭐</div>
+     <div class="grid"><button class="btn" id="again"><span class="e">🔁</span>เล่นอีก</button>
+     ${hasNext?`<button class="btn" id="nx" style="background:var(--yellow)"><span class="e">➡️</span>ด่านต่อไป</button>`:""}
+     <button class="btn" id="h"><span class="e">🏠</span>หน้าแรก</button></div>
+     ${hasNext?"":`<div class="say">🏆 ผ่านครบทุกด่านของ ${AGES[S.age].label} แล้ว! ลองอายุถัดไปดูไหม?</div>`}`;
+    $("#again").onclick=()=>run(idx);$("#h").onclick=home;if(hasNext)$("#nx").onclick=()=>run(idx+1);
+  }
+  step();
 }
 
-// ---------- Sticker book (spend stars) ----------
+// helper: render picture choices and wire up answer checking
+function choices(ctx,opts,ans,{cls="",show=o=>o[0],onRight,onWrong}={}){
+  return {html:`<div class="choices ${opts.length===3?"c3":""} ${cls}">${opts.map((o,i)=>`<button class="btn" data-c="${i}"><span class="e">${show(o)}</span></button>`).join("")}</div>`,
+    wire(){app.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{const o=opts[b.dataset.c];
+      if(o===ans){b.classList.add("ok");onRight?onRight(b,o):(b.innerHTML+=`<div>${label(o)}</div>`);ctx.ok(ans)}
+      else{shake(b);onWrong?onWrong(o):0;ctx.bad(ans)}})}};
+}
+
+const GAME_FN={
+  // 1. Listen and tap the picture
+  tap(ctx){
+    const opts=shuffle(ctx.set).slice(0,ctx.d.n), ans=pick(opts), say=()=>speak(word(ans));
+    const c=choices(ctx,opts,ans,{onWrong:()=>later(say,900)});
+    app.innerHTML=ctx.head(`<div class="prompt"><button class="btn" id="rep">🔊 ฟังอีกครั้ง</button></div>`)+c.html;
+    ctx.bind();c.wire();say();$("#rep").onclick=say;
+  },
+  // 2. Match the shadow to the picture
+  shadow(ctx){
+    const opts=shuffle(ctx.set).slice(0,ctx.d.n), ans=pick(opts);
+    const c=choices(ctx,opts,ans,{onRight:(b,o)=>{$("#sh").classList.remove("shadow");b.innerHTML+=`<div>${label(o)}</div>`;speak(word(o))}});
+    app.innerHTML=ctx.head(`<div class="say">${T("Whose shadow is this?","这是谁的影子?")} · เงานี้คือใคร?</div><div class="big shadow" id="sh">${ans[0]}</div>`)+c.html;
+    ctx.bind();c.wire();speak(T("Whose shadow is this?","这是谁的影子?"));
+  },
+  // 3. Pop the floating balloon that Momo names
+  pop(ctx){
+    const pool=shuffle(ctx.set).slice(0,ctx.d.n+1), ans=pick(pool), say=()=>speak(word(ans));
+    app.innerHTML=ctx.head(`<div class="prompt"><button class="btn" id="rep">🔊 ${T("Pop the","戳")} … ${S.age<=4?ans[0]:"❓"}</button></div>`)+`<div class="sky" id="sky"></div>`;
+    ctx.bind();$("#rep").onclick=say;say();
+    const sky=$("#sky");
+    const spawn=()=>{
+      const w=Math.random()<.4?ans:pick(pool), b=document.createElement("button");
+      b.className="balloon";b.textContent=w[0];b.style.left=rnd(4,80)+"%";b.style.animationDuration=ctx.d.speed+"s";
+      b.onanimationend=()=>b.remove();
+      b.onclick=()=>{if(w===ans){b.style.animation="none";b.style.transform="scale(1.6)";b.textContent="💥";
+          setTimeout(()=>b.remove(),300);speak(word(ans));ctx.ok(ans)}
+        else{shake(b);ctx.bad(ans);later(say,800)}};
+      sky.appendChild(b);
+    };
+    spawn();every(spawn,ctx.d.speed*220);
+  },
+  // 4. Memory match (age 3–4: picture↔picture, 5+: picture↔word)
+  memory(ctx){
+    const pairs=Math.min(ctx.d.pairs,ctx.set.length), picks=shuffle(ctx.set).slice(0,pairs), words=S.age>=5;
+    const cards=shuffle(picks.flatMap(w=>[{w,t:w[0]},{w,t:words?word(w):w[0],txt:words}]));
+    let open=[],done=0,lock=false;
+    app.innerHTML=ctx.head(`<div class="say">${words?"จับคู่ภาพกับคำศัพท์":"หาภาพที่เหมือนกัน"}</div>`)+
+      `<div class="grid mem" style="grid-template-columns:repeat(${cards.length>8?4:3},1fr)">${cards.map((c,i)=>`<button class="btn hid" data-i="${i}" style="${c.txt?"font-size:1.1rem":""}">${c.t}</button>`).join("")}</div>`;
+    ctx.bind();
+    app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
+      if(lock||!b.classList.contains("hid"))return;
+      const c=cards[b.dataset.i];b.classList.remove("hid");speak(word(c.w));open.push([b,c]);
+      if(open.length<2)return;
+      lock=true;const[[b1,c1],[b2,c2]]=open;
+      later(()=>{
+        if(c1.w===c2.w){b1.classList.add("ok");b2.classList.add("ok");track(c1.w,1);cheer(true);if(++done===pairs){ctx.ok();return}}
+        else{b1.classList.add("hid");b2.classList.add("hid");ctx.bad()}
+        open=[];lock=false;},900);
+    });
+  },
+  // 5. Count the objects
+  count(ctx){
+    const pool=V.numbers.slice(0,ctx.d.cnt), ans=pick(pool), item=pick(["🍎","🐥","⭐","🎈","🚗","🐟","🌸"]);
+    const opts=shuffle([ans,...shuffle(pool.filter(x=>x!==ans)).slice(0,Math.min(ctx.d.n,pool.length)-1)]);
+    const c=choices(ctx,opts,ans,{onRight:b=>speak(word(ans))});
+    app.innerHTML=ctx.head(`<div class="prompt" style="font-size:2.6rem;line-height:1.3">${item.repeat(ans[0])}</div><div class="say">มีกี่อัน? ${T("How many?","有几个?")}</div>`)+c.html;
+    ctx.bind();c.wire();speak(T("How many?","有几个?"));
+  },
+  // 6. Put N of something in the basket
+  basket(ctx){
+    const want=pick(ctx.set), n=rnd(1,Math.min(5,ctx.d.cnt));
+    const shelf=shuffle([...Array(n+2).fill(want),...shuffle(ctx.set.filter(x=>x!==want)).slice(0,ctx.d.n+1)]);
+    const pl=w=>n<2||/s$/.test(w)?w:w.replace(/y$/,"ie")+"s";
+    const ask=()=>speak(T(`Put ${V.numbers[n-1][1]} ${pl(want[1])} in the basket`,`请放${V.numbers[n-1][2]}个${want[2]}`));
+    let got=0;
+    app.innerHTML=ctx.head(`<div class="prompt"><button class="btn" id="rep">🔊 ${S.age<=4?`${n} × ${want[0]}`:"❓"}</button></div>`)+
+      `<div class="grid" style="grid-template-columns:repeat(4,1fr)">${shelf.map((f,i)=>`<button class="btn" data-i="${i}" style="font-size:2.5rem;padding:10px">${f[0]}</button>`).join("")}</div>
+       <div class="prompt" style="font-size:3rem;min-height:4rem">🧺 <span id="bk"></span></div>`;
+    ctx.bind();ask();$("#rep").onclick=ask;
+    app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
+      if(got>=n)return;const f=shelf[b.dataset.i];
+      if(f!==want){shake(b);speak(word(f));ctx.bad(want);return}
+      b.style.visibility="hidden";got++;$("#bk").textContent+=f[0];speak(word(V.numbers[got-1]));
+      if(got===n)later(()=>ctx.ok(want),600);
+    });
+  },
+  // 7. Odd one out
+  odd(ctx){
+    const others=Object.keys(V).filter(k=>k!==ctx.L.set&&k!=="numbers");
+    const same=shuffle(ctx.set).slice(0,ctx.d.n), ans=pick(V[pick(others)]), opts=shuffle([...same,ans]);
+    const q=T("Which one is different?","哪个不一样?");
+    const c=choices(ctx,opts,ans,{onRight:(b,o)=>{b.innerHTML+=`<div>${label(o)}</div>`;speak(word(o))}});
+    app.innerHTML=ctx.head(`<div class="say">${q}<br>อันไหนไม่ใช่${SETNAME[ctx.L.set]}?</div>`)+c.html;
+    ctx.bind();c.wire();speak(q);
+  },
+  // 8. What comes next in the pattern?
+  pattern(ctx){
+    const items=shuffle(ctx.set).slice(0,new Set(ctx.d.pat).size);
+    const unit=[...ctx.d.pat].map(ch=>items[ch.charCodeAt(0)-65]);
+    const seq=[...unit,...unit,...unit].slice(0,unit.length*2+rnd(0,unit.length-1)), ans=unit[seq.length%unit.length];
+    const opts=shuffle([...new Set([ans,...shuffle(ctx.set)])]).slice(0,ctx.d.n);if(!opts.includes(ans))opts[0]=ans;
+    const c=choices(ctx,shuffle(opts),ans,{onRight:(b,o)=>{$("#q").textContent=o[0];speak(word(o))}});
+    app.innerHTML=ctx.head(`<div class="say">${T("What comes next?","下一个是什么?")} · ต่อไปคืออะไร?</div>
+      <div class="seq">${seq.map(s=>`<span>${s[0]}</span>`).join("")}<span id="q">❓</span></div>`)+c.html;
+    ctx.bind();c.wire();speak(T("What comes next?","下一个是什么?"));
+  },
+  // 9. First letter (EN) / pick the Chinese character (ZH)
+  letter(ctx){
+    const ans=pick(ctx.set);
+    if(S.lang==="zh"){
+      const opts=shuffle([ans,...shuffle(ctx.set.filter(x=>x!==ans)).slice(0,ctx.d.n-1)]);
+      const c=choices(ctx,opts,ans,{show:o=>`<span style="font-size:2.2rem">${o[2]}</span>`,onRight:(b,o)=>{b.innerHTML+=`<small>${o[3]}</small>`;speak(o[2])}});
+      app.innerHTML=ctx.head(`<div class="say">哪个字是…? · ตัวไหนคือคำนี้?</div><div class="big">${ans[0]}</div>`)+c.html;
+      ctx.bind();c.wire();speak(ans[2]);return;
+    }
+    const first=ans[1][0], abc="abcdefghijklmnoprstuvwy".split("").filter(x=>x!==first);
+    const letters=shuffle([first,...shuffle(abc).slice(0,ctx.d.n-1)]).map(x=>[x.toUpperCase()+x]), right=letters.find(l=>l[0][1]===first);
+    const c=choices(ctx,letters,right,{show:o=>o[0],onRight:()=>{$("#w").textContent=ans[1];speak(`${first}, ${ans[1]}`)}});
+    app.innerHTML=ctx.head(`<div class="say">${ans[1]} starts with…? · ขึ้นต้นด้วยตัวอะไร?</div><div class="big">${ans[0]}</div>
+      <div class="prompt" id="w" style="letter-spacing:4px">_${ans[1].slice(1)}</div>`)+c.html;
+    ctx.bind();c.wire();speak(ans[1]);
+  },
+  // 10. Remember the order (parrot game)
+  seq(ctx){
+    const len=ctx.d.seq, list=Array.from({length:len},()=>pick(ctx.set)), opts=shuffle([...new Set([...list,...shuffle(ctx.set)])]).slice(0,Math.max(ctx.d.n,new Set(list).size));
+    if(!list.every(w=>opts.includes(w)))list.forEach((w,i)=>{if(!opts.includes(w))opts[i]=w});
+    let pos=0;
+    const play=()=>{speechSynthesis?.cancel();list.forEach(w=>speak(word(w),S.lang,1))};
+    app.innerHTML=ctx.head(`<div class="say">ฟังโมโมะ แล้วแตะตามลำดับ (${len} คำ)</div>
+      <div class="prompt"><button class="btn" id="rep">🔊 ฟังอีกครั้ง</button></div><div class="seq" id="got">${"⬜".repeat(len)}</div>`)+
+      `<div class="choices ${opts.length===3?"c3":""}">${opts.map((o,i)=>`<button class="btn" data-c="${i}"><span class="e">${o[0]}</span></button>`).join("")}</div>`;
+    ctx.bind();$("#rep").onclick=()=>{pos=0;$("#got").textContent="⬜".repeat(len);play()};later(play,300);
+    app.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
+      const o=opts[b.dataset.c];
+      if(o===list[pos]){pos++;$("#got").textContent=list.slice(0,pos).map(w=>w[0]).join("")+"⬜".repeat(len-pos);speak(word(o));
+        if(pos===len)ctx.ok(list[0])}
+      else{shake(b);ctx.bad(list[pos]);pos=0;later(()=>{$("#got").textContent="⬜".repeat(len);play()},900)}
+    });
+  },
+  // 11. Picture addition
+  add(ctx){
+    const max=ctx.L.hard?10:6, a=rnd(1,max-1), b=rnd(1,max-a), ans=V.numbers[a+b-1], it=pick(["🍎","🍓","🐤","🌟","🍪"]);
+    const opts=shuffle([ans,...shuffle(V.numbers.slice(0,10).filter(x=>x!==ans&&Math.abs(x[0]-ans[0])<=3)).slice(0,ctx.d.n-1)]);
+    const q=T(`${V.numbers[a-1][1]} plus ${V.numbers[b-1][1]}`,`${V.numbers[a-1][2]}加${V.numbers[b-1][2]}`);
+    const c=choices(ctx,opts,ans,{onRight:()=>speak(T(`${q} is ${ans[1]}`,`${q}等于${ans[2]}`))});
+    app.innerHTML=ctx.head(`<div class="prompt" style="font-size:2.2rem;line-height:1.4">${it.repeat(a)} ➕ ${it.repeat(b)}</div><div class="prompt">${a} + ${b} = ❓</div>`)+c.html;
+    ctx.bind();c.wire();speak(q);
+  },
+  // 12. Say the word out loud (speech recognition)
+  talk(ctx){
+    const w=pick(ctx.set), SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    app.innerHTML=ctx.head(`<div class="big">${w[0]}</div><div class="prompt">${label(w)}</div>
+      <div class="grid"><button class="btn" id="rep"><span class="e">🔊</span>ฟัง</button>
+      <button class="btn" id="mic" style="background:var(--yellow)"><span class="e">🎤</span>${SR?"กดแล้วพูด":"พูดตามแล้วกด ✔"}</button></div><div class="say" id="heard"></div>`);
+    ctx.bind();const say=()=>speak(word(w));say();$("#rep").onclick=say;
+    $("#mic").onclick=()=>{
+      if(!SR){ctx.ok(w);return}   // no recognition: grown-up confirms
+      const r=new SR();r.lang=LC[S.lang];r.maxAlternatives=5;$("#heard").textContent="👂 กำลังฟัง...";
+      r.onresult=e=>{const alts=[...e.results[0]].map(a=>a.transcript.toLowerCase().replace(/\s/g,"")), t=word(w).toLowerCase().replace(/\s/g,"");
+        // kids' pronunciation is fuzzy: accept any alternative containing the word
+        if(alts.some(a=>a.includes(t)||(t.includes(a)&&a.length>1)))ctx.ok(w);
+        else{$("#heard").textContent=`ได้ยินว่า "${alts[0]}" ลองอีกครั้งนะ`;ctx.bad(w)}};
+      r.onerror=()=>{$("#heard").innerHTML=`ไมค์ใช้ไม่ได้ <button class="btn" id="skip">✔ พูดแล้ว</button>`;$("#skip").onclick=()=>ctx.ok(w)};
+      r.start();
+    };
+  },
+};
+
+// ---------- Sticker book ----------
 function book(){
   const free=S.stars-S.spent;
   app.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><button class="btn back" id="back">🏠</button><b>📒 สมุดสติกเกอร์</b><span>⭐ ${free}</span></div>
-    <div class="say">แลกสติกเกอร์ ${PRICE} ⭐ · แตะสติกเกอร์ที่ได้แล้วเพื่อให้โมโมะใส่ 👑</div>
-    <div class="grid" style="grid-template-columns:repeat(4,1fr)">${STICKERS.map(s=>{const has=S.stickers.includes(s);
-      return `<button class="btn ${has?"":"locked"}" data-s="${s}" style="font-size:2.6rem;padding:12px">${has?s:"❔"}</button>`}).join("")}</div>
+    <div class="say">แลกสติกเกอร์ ${PRICE} ⭐ · แตะสติกเกอร์ที่ได้แล้วเพื่อให้โมโมะใส่</div>
+    <div class="grid" style="grid-template-columns:repeat(5,1fr)">${STICKERS.map(s=>{const has=S.stickers.includes(s);
+      return `<button class="btn ${has?"":"locked"} ${S.hat===s?"on":""}" data-s="${s}" style="font-size:2.3rem;padding:10px">${has?s:"❔"}</button>`}).join("")}</div>
     <div class="grid" style="margin-top:16px"><button class="btn" id="buy" style="background:var(--yellow)"><span class="e">🎁</span>สุ่มสติกเกอร์ (${PRICE}⭐)</button></div>`;
-  bindBack();
+  $("#back").onclick=home;
   $("#buy").onclick=()=>{const left=STICKERS.filter(s=>!S.stickers.includes(s));
     if(!left.length){speak("ครบแล้ว เก่งมาก","th");return}
     if(free<PRICE){speak("เก็บดาวเพิ่มอีกนิดนะ","th");return}
-    const s=shuffle(left)[0];S.spent+=PRICE;S.stickers.push(s);save();
+    const s=pick(left);S.spent+=PRICE;S.stickers.push(s);save();
     const p=document.createElement("div");p.className="pop";p.textContent=s;document.body.appendChild(p);setTimeout(()=>p.remove(),1000);
     speak("Yay!","en");book();};
-  app.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{if(S.stickers.includes(b.dataset.s)){S.hat=S.hat===b.dataset.s?"":b.dataset.s;save();speak("โมโมะชอบมาก","th")}});
+  app.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{if(S.stickers.includes(b.dataset.s)){S.hat=S.hat===b.dataset.s?"":b.dataset.s;save();book()}});
 }
 
-// ---------- Parent page (with grown-up gate) ----------
+// ---------- Parent page (grown-up gate) ----------
 function parentGate(){
-  const a=3+Math.floor(Math.random()*6),b=4+Math.floor(Math.random()*5),opts=shuffle([a+b,a+b+2,a+b-1]);
+  const a=rnd(3,8),b=rnd(4,8),opts=shuffle([a+b,a+b+2,a+b-1]);
   app.innerHTML=`<button class="btn back" id="back">🏠</button><div class="prompt">สำหรับผู้ใหญ่: ${a} + ${b} = ?</div>
-    <div class="choices" style="grid-template-columns:repeat(3,1fr)">${opts.map(o=>`<button class="btn" data-o="${o}"><span class="e">${o}</span></button>`).join("")}</div>`;
-  bindBack();app.querySelectorAll("[data-o]").forEach(x=>x.onclick=()=>x.dataset.o==a+b?parent():home());
+    <div class="choices c3">${opts.map(o=>`<button class="btn" data-o="${o}"><span class="e">${o}</span></button>`).join("")}</div>`;
+  $("#back").onclick=home;app.querySelectorAll("[data-o]").forEach(x=>x.onclick=()=>x.dataset.o==a+b?parentPage():home());
 }
-function parent(){
+function parentPage(){
   const rows=allWords().filter(w=>S.stats[w[1]]).map(w=>({w,...S.stats[w[1]]}));
   const learned=rows.filter(r=>r.ok>=3&&r.ok>r.bad*2), hard=rows.filter(r=>r.bad>=2&&!learned.includes(r)).sort((a,b)=>b.bad-a.bad);
   const chip=r=>`<span class="btn" style="display:inline-block;padding:8px 12px;margin:4px;font-size:1rem">${r.w[0]} ${r.w[1]} · ${r.w[2]} <small>✔${r.ok} ✘${r.bad}</small></span>`;
+  const prog=Object.keys(AGES).map(a=>`${AGES[a].icon} ${AGES[a].label}: <b>${PATHS[a].filter((_,i)=>S.done[`${a}-${i}`]).length}/${PATHS[a].length}</b>`).join(" · ");
   app.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><button class="btn back" id="back">🏠</button><b>👪 รายงานสำหรับผู้ปกครอง</b><span></span></div>
     <p>⭐ ดาวทั้งหมด <b>${S.stars}</b> · สติกเกอร์ <b>${S.stickers.length}/${STICKERS.length}</b> · ฝึกไปแล้ว <b>${rows.length}/${allWords().length}</b> คำ</p>
+    <p>ด่านที่ผ่าน — ${prog}</p>
     <h3>✅ คำที่รู้แล้ว (${learned.length})</h3><div>${learned.map(chip).join("")||"<i>ยังไม่มี — เล่นต่ออีกนิดนะ</i>"}</div>
     <h3>💪 คำที่ควรฝึกเพิ่ม (${hard.length})</h3><div>${hard.map(chip).join("")||"<i>ยังไม่มีคำที่ผิดบ่อย 👍</i>"}</div>
-    <p class="parent">เคล็ดลับ: ชี้ของจริงในบ้านแล้วถามลูกด้วยคำในกลุ่ม "ควรฝึกเพิ่ม" จะจำได้เร็วขึ้น</p>
+    <p class="note">เคล็ดลับ: ชี้ของจริงในบ้านแล้วถามลูกด้วยคำในกลุ่ม "ควรฝึกเพิ่ม" จะจำได้เร็วขึ้น</p>
     <button class="btn" id="reset" style="font-size:.9rem">🗑 ล้างข้อมูลทั้งหมด</button>`;
-  bindBack();$("#reset").onclick=()=>{if(confirm("ล้างดาว สติกเกอร์ และสถิติทั้งหมด?")){Object.assign(S,{stars:0,spent:0,stickers:[],stats:{},hat:""});save();home()}};
+  $("#back").onclick=home;
+  $("#reset").onclick=()=>{if(confirm("ล้างดาว สติกเกอร์ ด่าน และสถิติทั้งหมด?")){Object.assign(S,{stars:0,spent:0,stickers:[],stats:{},done:{},hat:"",age:0});save();home()}};
 }
 
 save();home();
-if(window.speechSynthesis) speechSynthesis.getVoices();
-if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js");
+if(window.speechSynthesis)speechSynthesis.getVoices();
+if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js");
 </script>
 </body>
 </html>
