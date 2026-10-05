@@ -145,18 +145,70 @@ const clearTimers=()=>{timers.forEach(t=>{clearTimeout(t);clearInterval(t)});tim
 
 // ---------- Voice ----------
 const LC={zh:"zh-CN",th:"th-TH",en:"en-US"};
-function speak(text,lang=S.lang,keep){
-  if(!window.speechSynthesis)return;
-  if(!keep)speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(String(text));u.lang=LC[lang];u.rate=.8;u.pitch=1.3;speechSynthesis.speak(u);
+// Prefer natural/neural voices, which sound far smoother than the default robotic ones.
+// Higher score wins; female/child-friendly voices get a small bonus.
+const VOICE_HINTS={
+  en:[/natural/i,/neural/i,/premium|enhanced/i,/google us english/i,/aria|jenny|ana|samantha|ava|allison|susan|zira/i],
+  zh:[/natural/i,/neural/i,/premium|enhanced/i,/xiaoxiao|xiaoyi|xiaohan|tingting|meijia|huihui|yaoyao/i,/google.*(普通话|mandarin)/i],
+  th:[/natural/i,/neural/i,/premwadee|achara|kanya|pattara/i,/google.*ไทย|thai/i],
+};
+const voiceCache={};
+function bestVoice(lang){
+  if(voiceCache[lang]!==undefined)return voiceCache[lang];
+  const all=speechSynthesis.getVoices(), code=LC[lang], base=code.slice(0,2);
+  const cands=all.filter(v=>v.lang.replace("_","-").toLowerCase().startsWith(base)&&!/hk|tw|yue/i.test(lang==="zh"?v.lang+v.name:""));
+  if(!cands.length)return null;   // voices not loaded yet: don't cache
+  const score=v=>VOICE_HINTS[lang].reduce((s,re,i)=>s+(re.test(v.name)?10-i:0),0)+(v.lang.replace("_","-")===code?2:0)+(/female|girl/i.test(v.name)?1:0)-(/male\b|david|mark|guy|kangkang|yunyang/i.test(v.name)?3:0);
+  return voiceCache[lang]=cands.sort((a,b)=>score(b)-score(a))[0];
 }
+if(window.speechSynthesis)speechSynthesis.onvoiceschanged=()=>{for(const k in voiceCache)delete voiceCache[k]};
+// Each buddy has a slightly different, gentle voice pitch
+const PET_PITCH={momo:1.2,panpan:1.05,miew:1.25,puy:1.15,kiko:1.1,lala:1.25,koko:1,gab:1.1,chick:1.3,tiger:1,pengu:1.15,leo:.95};
+let speakTimer;
+function speak(text,lang=S.lang,keep){
+  if(!window.speechSynthesis||S.mute)return;
+  const say=()=>{
+    const u=new SpeechSynthesisUtterance(String(text)), v=bestVoice(lang);
+    u.lang=LC[lang];if(v)u.voice=v;
+    // natural voices already sound warm, so keep them closer to normal speed/pitch
+    const natural=v&&/natural|neural|premium|enhanced|google/i.test(v.name);
+    u.rate=lang==="en"?(natural?.88:.82):(natural?.85:.78);
+    u.pitch=Math.min(1.35,(PET_PITCH[S.pet]||1.15)*(natural?.95:1));
+    u.volume=1;speechSynthesis.speak(u);
+  };
+  if(keep){say();return}
+  // cancel() then speaking instantly causes clipped/stuttering audio in Chrome; give it a breath
+  speechSynthesis.cancel();clearTimeout(speakTimer);speakTimer=setTimeout(say,60);
+}
+
+// ---------- Cute sound effects (Web Audio, no files needed) ----------
+let AC;
+function tone(notes,{type="sine",vol=.18,gap=.09,dur=.18}={}){
+  if(S.mute)return;
+  try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();
+    const t0=AC.currentTime;
+    notes.forEach((f,i)=>{const o=AC.createOscillator(),g=AC.createGain(),t=t0+i*gap;
+      o.type=type;o.frequency.setValueAtTime(f,t);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+      o.connect(g).connect(AC.destination);o.start(t);o.stop(t+dur+.05)});
+  }catch(e){}
+}
+const SFX={
+  ok:()=>tone([784,988,1319],{type:"triangle"}),            // G5-B5-E6 sparkle
+  bad:()=>tone([330,262],{type:"sine",vol:.12,gap:.14,dur:.22}), // soft "uh-oh"
+  tap:()=>tone([660],{type:"sine",vol:.08,dur:.08}),
+  pop:()=>tone([1200,600],{type:"square",vol:.06,gap:.03,dur:.08}),
+  win:()=>tone([523,659,784,1047,784,1047],{type:"triangle",gap:.11,dur:.25}),
+};
+document.addEventListener("pointerdown",e=>{if(e.target.closest(".btn"))SFX.tap()},true);
 const word=w=>S.lang==="zh"?w[2]:w[1];
 const label=w=>S.lang==="zh"?`${w[2]}<br><small>${w[3]}</small>`:w[1];
 const T=(en,zh)=>S.lang==="zh"?zh:en;
 function cheer(ok){
   const p=document.createElement("div");p.className="pop";p.textContent=ok?pick(["🌟","🎉","💖","👏"]):"🤔";
   document.body.appendChild(p);setTimeout(()=>p.remove(),1000);
-  if(!ok)speak(T("Try again","再试试"));
+  ok?SFX.ok():SFX.bad();
+  if(!ok)setTimeout(()=>speak(T("Try again","再试试")),300);
 }
 const shake=b=>{b.classList.add("no");setTimeout(()=>b.classList.remove("no"),400)};
 
@@ -196,7 +248,7 @@ function home(){
   app.innerHTML=`
     <div class="momo" id="pet">${pet().e}${S.hat}</div><div class="say">${pet().hi}</div>
     <div class="row">
-      <button class="btn" id="age">${g.icon} ${g.label} ✏️</button><button class="btn" id="chpet">${pet().e} เปลี่ยนเพื่อน</button>
+      <button class="btn" id="age">${g.icon} ${g.label} ✏️</button><button class="btn" id="chpet">${pet().e} เปลี่ยนเพื่อน</button><button class="btn" id="mute">${S.mute?"🔇":"🔊"}</button>
       <button class="btn ${S.lang==="en"?"on":""}" data-l="en">🇬🇧 English</button>
       <button class="btn ${S.lang==="zh"?"on":""}" data-l="zh">🇨🇳 中文</button>
     </div>
@@ -216,7 +268,7 @@ function home(){
     if(!unlocked(i)){speak("ผ่านด่านก่อนหน้าก่อนนะ","th");return}
     run(i);
   });
-  $("#age").onclick=agePick;$("#chpet").onclick=petPick;$("#pet").onclick=()=>speak(pet()[S.lang]||pet().en);$("#book").onclick=book;$("#par").onclick=parentGate;
+  $("#age").onclick=agePick;$("#chpet").onclick=petPick;$("#mute").onclick=()=>{S.mute=!S.mute;if(S.mute)speechSynthesis?.cancel();save();home()};$("#pet").onclick=()=>speak(pet()[S.lang]||pet().en);$("#book").onclick=book;$("#par").onclick=parentGate;
 }
 
 // ---------- Level runner (shared by every game) ----------
@@ -238,7 +290,7 @@ function run(idx){
     clearTimers();
     const st=miss===0?3:miss<=2?2:1, k=levelKey(idx);
     S.done[k]=Math.max(S.done[k]||0,st);S.stars+=st;save();
-    speak(T("Hooray! You did it!","太棒了!"));
+    SFX.win();setTimeout(()=>speak(T("Hooray! You did it!","太棒了!")),700);
     const hasNext=idx+1<PATHS[S.age].length;
     app.innerHTML=`<div class="momo">🎉${pet().e}🎉</div><div class="prompt" style="font-size:3rem">${"⭐".repeat(st)}${"☆".repeat(3-st)}</div>
      <div class="prompt">เก่งมาก! +${st} ⭐</div>
@@ -284,7 +336,7 @@ const GAME_FN={
       const w=Math.random()<.4?ans:pick(pool), b=document.createElement("button");
       b.className="balloon";b.textContent=w[0];b.style.left=rnd(4,80)+"%";b.style.animationDuration=ctx.d.speed+"s";
       b.onanimationend=()=>b.remove();
-      b.onclick=()=>{if(w===ans){b.style.animation="none";b.style.transform="scale(1.6)";b.textContent="💥";
+      b.onclick=()=>{if(w===ans){b.style.animation="none";b.style.transform="scale(1.6)";b.textContent="💥";SFX.pop();
           setTimeout(()=>b.remove(),300);speak(word(ans));ctx.ok(ans)}
         else{shake(b);ctx.bad(ans);later(say,800)}};
       sky.appendChild(b);
