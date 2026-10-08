@@ -34,7 +34,7 @@ async function rec([k, { lang, text, pitch }]) {
   const v = VOICES[lang], path = fileURLToPath(new URL(fileOf(k), OUT)), hz = (pitch ?? v.pitch);
   for (let tryN = 1; tryN <= 4; tryN++) {
     try {
-      await new EdgeTTS({ voice: v.voice, lang: v.voice.slice(0, 5), rate: v.rate, pitch: `${hz >= 0 ? "+" : ""}${hz}Hz`, timeout: 20000,
+      await new EdgeTTS({ voice: v.voice, lang: v.voice.slice(0, 5), rate: v.rate, pitch: `${hz >= 0 ? "+" : ""}${hz}Hz`, timeout: 60000,
         outputFormat: "audio-24khz-48kbitrate-mono-mp3" }).ttsPromise(text, path);
       if (statSync(path).size > 500) { if (++done % 50 === 0) console.log(done); return; }
     } catch (e) { if (tryN === 4) console.warn("FAILED", k, e?.message || e); }
@@ -44,7 +44,7 @@ async function rec([k, { lang, text, pitch }]) {
   delete index[k];
 }
 const queue = [...todo];
-await Promise.all(Array.from({ length: 4 }, async () => { while (queue.length) await rec(queue.shift()); }));
+await Promise.all(Array.from({ length: +(process.env.JOBS || 4) }, async () => { while (queue.length) await rec(queue.shift()); }));
 writeFileSync(new URL("index.json", OUT), JSON.stringify(index));
 console.log(`done: ${Object.keys(index).length} files in index`);
 // Remove clips no longer used by the game

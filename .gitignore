@@ -9,3 +9,4 @@ tools/ctl/
 tools/gen.log
 tools/thai-check.json
 tools/ctl.mjs
+tools/gen2.log
