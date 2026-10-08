@@ -5,3 +5,7 @@
 .env*
 !.env.example
 node_modules
+tools/ctl/
+tools/gen.log
+tools/thai-check.json
+tools/ctl.mjs

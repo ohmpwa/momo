@@ -9,12 +9,14 @@
 <link rel="icon" href="icon.svg">
 <style>
 :root{--bg:#fff6e9;--card:#fff;--pink:#ff8fab;--yellow:#ffd166;--green:#06d6a0;--blue:#4cc9f0;--purple:#b388ff;--ink:#5a3e36}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+input{user-select:text;-webkit-user-select:text}
 body{margin:0;font-family:"Comic Sans MS","Chalkboard SE",system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center}
 header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 16px}
 h1{margin:0;font-size:2rem;color:var(--pink)}
 .stars{font-size:1.4rem;background:var(--card);padding:6px 14px;border-radius:20px;box-shadow:0 3px 0 #0001}
 main{width:100%;max-width:760px;padding:0 16px 24px;flex:1}
+img.emo{width:1em;height:1em;vertical-align:-.12em;margin:0 .04em;pointer-events:none}
 .momo{font-size:5rem;text-align:center;animation:bob 2s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(-10px)}}
 .say{text-align:center;font-size:1.3rem;margin:4px 0 16px}
@@ -35,9 +37,14 @@ main{width:100%;max-width:760px;padding:0 16px 24px;flex:1}
 .ok{background:var(--green)!important;color:#fff}
 .no{animation:shake .4s}
 @keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.hint{animation:glow 1s ease-in-out infinite}
+@keyframes glow{50%{box-shadow:0 0 0 6px var(--yellow),0 6px 0 #0002;transform:scale(1.06)}}
+.balloon.hint{animation:rise linear forwards,bgl 1s ease-in-out infinite;filter:drop-shadow(0 0 10px gold)}
+@keyframes bgl{50%{filter:drop-shadow(0 0 18px orange)}}
 .back{background:var(--blue);color:#fff;padding:10px 16px}
 .mem .btn{min-height:84px;font-size:2.3rem;padding:6px}
 .mem .hid{background:var(--pink);color:transparent}
+.mem .hid img{visibility:hidden}
 .pop{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:8rem;pointer-events:none;animation:pop 1s forwards;z-index:9}
 @keyframes pop{0%{transform:scale(.2);opacity:0}30%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:0}}
 .note{font-size:.9rem;opacity:.7;text-align:center;margin-top:20px}
@@ -56,6 +63,16 @@ main{width:100%;max-width:760px;padding:0 16px 24px;flex:1}
 .langs.bigflags .btn{flex-direction:column;padding:12px 10px;flex:1;max-width:120px}
 .langs.bigflags .flag{width:56px;height:37px}
 .word{font-size:1.5rem}
+.letter{font-size:3rem;font-weight:bold}
+.card{background:var(--card);border-radius:24px;padding:14px;box-shadow:0 6px 0 #0001;margin-bottom:16px}
+.card h3{margin:0 0 10px;text-align:center}
+.mission .row{margin:0}
+.mission .btn{min-width:84px}
+.mission .done{background:#d9fbe9}
+input.name{font:inherit;font-size:1.3rem;padding:12px 16px;border-radius:16px;border:2px solid #0002;width:min(320px,100%)}
+.set{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.set .btn{padding:8px 14px;font-size:1rem;box-shadow:0 3px 0 #0002}
+.priv{font-size:.95rem;line-height:1.6;padding-left:20px}
 </style>
 </head>
 <body>
@@ -63,38 +80,92 @@ main{width:100%;max-width:760px;padding:0 16px 24px;flex:1}
 <main id="app"></main>
 <script src="data.js"></script>
 <script>
-// ---------- State ----------
-const S={stars:0,spent:0,stickers:[],stats:{},done:{},lang:"",hat:"",age:0,pet:""};
-try{Object.assign(S,JSON.parse(localStorage.getItem("momo")||"{}"))}catch(e){}
+// ---------- Small helpers ----------
 const $=q=>document.querySelector(q), app=$("#app");
-const pet=()=>PETS.find(p=>p.id===S.pet)||PETS[0];
-const petName=()=>pet().n[S.lang]||pet().n.en;
-const save=()=>{try{localStorage.setItem("momo",JSON.stringify(S))}catch(e){};$("#stars").textContent=S.stars-S.spent;$("#hpet").textContent=pet().e;document.documentElement.lang=S.lang||"th"};
 const shuffle=a=>a.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
-function track(w,ok){const k=w[1],t=S.stats[k]||(S.stats[k]={ok:0,bad:0});ok?t.ok++:t.bad++;save()}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const today=()=>new Date().toLocaleDateString("sv");
 const allWords=()=>Object.values(V).flat();
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 let timers=[];const later=(f,ms)=>timers.push(setTimeout(f,ms));
 const every=(f,ms)=>timers.push(setInterval(f,ms));
 const clearTimers=()=>{timers.forEach(t=>{clearTimeout(t);clearInterval(t)});timers=[]};
+let screen="";
+
+// ---------- Players (each child has their own progress) ----------
+const DEF=()=>({stars:0,spent:0,stickers:[],stats:{},done:{},lang:"",hat:"",age:0,pet:"",mute:false,music:false,bilingual:false,limit:0,play:{date:"",sec:0,extra:0},mission:null});
+const newId=()=>"p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+let PROF=store.get("momo-profiles");
+if(!PROF||!PROF.list||!PROF.list.length){
+  const id=newId();PROF={list:[{id,name:""}],cur:id};
+  const old=store.get("momo");if(old)store.set("momo:"+id,old);   // single-player save from older versions
+  store.set("momo-profiles",PROF);try{localStorage.removeItem("momo")}catch(e){}
+}
+const S={};
+function loadProfile(id){
+  PROF.cur=id;for(const k in S)delete S[k];
+  Object.assign(S,DEF(),store.get("momo:"+id)||{});
+  // progress used to be saved by level position ("4-3"); convert to stable level ids ("4:odd.fruits")
+  for(const k of Object.keys(S.done))if(/^\d-\d+$/.test(k)){const[a,i]=k.split("-"),id2=(LEGACY_PATHS[a]||"").split(",")[i];if(id2)S.done[`${a}:${id2}`]=Math.max(S.done[`${a}:${id2}`]||0,S.done[k]);delete S.done[k]}
+  // word stats are now kept per language
+  for(const k of Object.keys(S.stats))if(!k.includes("|")){S.stats[`${S.lang||"en"}|${k}`]=S.stats[k];delete S.stats[k]}
+}
+const pet=()=>PETS.find(p=>p.id===S.pet)||PETS[0];
+function save(){
+  store.set("momo:"+PROF.cur,S);
+  const p=PROF.list.find(x=>x.id===PROF.cur);if(p){p.pet=S.pet;p.age=S.age}
+  store.set("momo-profiles",PROF);
+  $("#stars").textContent=S.stars-S.spent;$("#hpet").textContent=pet().e;document.documentElement.lang=S.lang||"th";
+}
 
 // ---------- Language helpers: menus follow the language being practised ----------
 const L_=()=>S.lang||"th";
 const t=(k,...a)=>{const v=UI[L_()][k]??UI.en[k];return typeof v==="function"?v(...a):v};
 const say=k=>SAY[L_()][k];
 const setName=k=>SETNAME[L_()][k];
+const levelSet=L=>L.game==="abc"&&ABC[L_()]?SETNAME[L_()].abc:setName(L.set);
 const gameName=g=>GAMES[g].t[L_()];
+const petName=()=>pet().n[L_()];
 const word=w=>wordIn(w,L_());
-const label=w=>S.lang==="zh"?`${w[2]}<br><small>${w[3]}</small>`:word(w);
+const bi=()=>S.bilingual&&L_()!=="th";
+const label=w=>(S.lang==="zh"?`${w[2]}<br><small>${w[3]}</small>`:word(w))+(bi()?`<br><small>${w[4]}</small>`:"");
 function langButtons(cls=""){
   return `<div class="row langs ${cls}">${LANGS.map(l=>`<button class="btn ${S.lang===l?"on":""}" data-l="${l}">${FLAGS[l]}<span>${LANG_NAME[l]}</span></button>`).join("")}</div>`;
 }
 function wireLangs(after){app.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{S.lang=b.dataset.l;save();after()})}
 
-// ---------- Voice ----------
+// ---------- Pictures: Twemoji served from /emoji (same look on every device) ----------
+const EMOJI_RE=/\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}️?|[\u{1F3FB}-\u{1F3FF}])*/gu;
+const codeOf=e=>[...(e.includes("‍")?e:e.replace(/️/g,""))].map(c=>c.codePointAt(0).toString(16)).join("-");
+let EMOJI=[];const EMOJI_SET=new Set();
+function twemojify(root){
+  if(!EMOJI_SET.size||!root)return;
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>/^(SCRIPT|STYLE|TEXTAREA|INPUT|TITLE)$/.test(n.parentNode&&n.parentNode.nodeName)?2:1});
+  const nodes=[];while(w.nextNode())nodes.push(w.currentNode);
+  for(const n of nodes){
+    const s=n.nodeValue;if(!s||!s.match(EMOJI_RE))continue;
+    const frag=document.createDocumentFragment();let last=0;
+    for(const m of s.matchAll(EMOJI_RE)){
+      const c=codeOf(m[0]);if(!EMOJI_SET.has(c))continue;
+      if(m.index>last)frag.append(s.slice(last,m.index));
+      const img=document.createElement("img");img.className="emo";img.alt=m[0];img.draggable=false;img.src=`emoji/${c}.svg`;
+      frag.append(img);last=m.index+m[0].length;
+    }
+    if(!last)continue;
+    if(last<s.length)frag.append(s.slice(last));
+    n.replaceWith(frag);
+  }
+}
+new MutationObserver(ms=>{for(const m of ms){
+  if(m.type==="characterData")twemojify(m.target.parentNode);
+  else m.addedNodes.forEach(n=>twemojify(n.nodeType===3?n.parentNode:n));
+}}).observe(document.body,{childList:true,subtree:true,characterData:true});
+fetch("emoji/index.json").then(r=>r.json()).then(a=>{EMOJI=a;a.forEach(c=>EMOJI_SET.add(c));twemojify(document.body)}).catch(()=>{});
+
+// ---------- Voice: pre-recorded neural clips, browser voice as fallback ----------
 const LC={zh:"zh-CN",th:"th-TH",en:"en-US"};
-// Browser-voice fallback: prefer natural/neural voices
 const VOICE_HINTS={
   en:[/natural/i,/neural/i,/premium|enhanced/i,/google us english/i,/aria|jenny|ana|samantha|ava|allison|susan|zira/i],
   zh:[/natural/i,/neural/i,/premium|enhanced/i,/xiaoxiao|xiaoyi|xiaohan|tingting|meijia|huihui|yaoyao/i,/google.*(普通话|mandarin)/i],
@@ -105,27 +176,36 @@ function bestVoice(lang){
   if(voiceCache[lang]!==undefined)return voiceCache[lang];
   const all=speechSynthesis.getVoices(), code=LC[lang], base=code.slice(0,2);
   const cands=all.filter(v=>v.lang.replace("_","-").toLowerCase().startsWith(base)&&!/hk|tw|yue/i.test(lang==="zh"?v.lang+v.name:""));
-  if(!cands.length)return null;   // voices not loaded yet: don't cache
+  if(!cands.length)return null;
   const score=v=>VOICE_HINTS[lang].reduce((s,re,i)=>s+(re.test(v.name)?10-i:0),0)+(v.lang.replace("_","-")===code?2:0)+(/female|girl/i.test(v.name)?1:0)-(/male\b|david|mark|guy|kangkang|yunyang/i.test(v.name)?3:0);
   return voiceCache[lang]=cands.sort((a,b)=>score(b)-score(a))[0];
 }
 if(window.speechSynthesis)speechSynthesis.onvoiceschanged=()=>{for(const k in voiceCache)delete voiceCache[k]};
-// Pre-recorded neural voice clips (tools/gen-audio.mjs) — natural, child-friendly.
 let CLIPS={};
 fetch("audio/index.json").then(r=>r.ok?r.json():{}).then(j=>CLIPS=j).catch(()=>{});
-const player=new Audio();let clipQueue=[];
-player.onended=()=>{const n=clipQueue.shift();if(n){player.src=n;player.play().catch(()=>{})}};
-function stopVoice(){clipQueue=[];player.pause();window.speechSynthesis?.cancel()}
+const player=new Audio();
+// Clips are fetched as blobs (plain requests the service worker can answer offline, also on iOS)
+const blobs=new Map();
+async function clipUrl(src){
+  if(blobs.has(src))return blobs.get(src);
+  try{const r=await fetch(src);if(!r.ok)throw 0;const u=URL.createObjectURL(await r.blob());blobs.set(src,u);return u}catch(e){return src}
+}
+const prefetch=srcs=>srcs.forEach(s=>s&&clipUrl(s));
+const clipOf=(text,lang=L_())=>CLIPS[`${lang}|${text}`]&&"audio/"+CLIPS[`${lang}|${text}`];
+let clipQueue=[],voiceTok=0,playing=false;
+async function playNext(tok){
+  const src=clipQueue.shift();
+  if(!src){playing=false;duck(false);return}
+  playing=true;const u=await clipUrl(src);if(tok!==voiceTok)return;
+  player.src=u;duck(true);player.play().catch(()=>{playing=false;duck(false)});
+}
+player.onended=player.onerror=()=>playNext(voiceTok);
+function stopVoice(){voiceTok++;clipQueue=[];playing=false;player.pause();window.speechSynthesis?.cancel();duck(false)}
 let speakTimer;
 function speak(text,lang=L_(),keep){
   if(S.mute||!text)return;
-  const clip=CLIPS[`${lang}|${text}`];
-  if(clip){
-    const src="audio/"+clip;
-    if(keep&&!player.paused&&!player.ended){clipQueue.push(src);return}   // queue (parrot game)
-    if(!keep)stopVoice();
-    player.src=src;player.play().catch(()=>{});return;
-  }
+  const clip=clipOf(text,lang);
+  if(clip){if(!keep)stopVoice();clipQueue.push(clip);if(!playing)playNext(voiceTok);return}
   if(!window.speechSynthesis)return;
   if(location.protocol.startsWith("http")&&Object.keys(CLIPS).length)console.warn("no clip for",lang,text);
   const go=()=>{
@@ -137,20 +217,21 @@ function speak(text,lang=L_(),keep){
     speechSynthesis.speak(u);
   };
   if(keep){go();return}
-  // cancel() then speaking instantly causes clipped audio in Chrome; give it a breath
   stopVoice();clearTimeout(speakTimer);speakTimer=setTimeout(go,60);
 }
+// Bilingual mode: Thai word first, then the word in the language being practised
+function sayWord(w){if(bi()){speak(w[4],"th");speak(word(w),L_(),1)}else speak(word(w))}
 
-// ---------- Cute sound effects (Web Audio, no files needed) ----------
+// ---------- Sound effects & background music (Web Audio, no files) ----------
 let AC;
+const ac=()=>{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();return AC};
 function tone(notes,{type="sine",vol=.18,gap=.09,dur=.18}={}){
   if(S.mute)return;
-  try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();
-    const t0=AC.currentTime;
-    notes.forEach((f,i)=>{const o=AC.createOscillator(),g=AC.createGain(),tt=t0+i*gap;
+  try{const A=ac(),t0=A.currentTime;
+    notes.forEach((f,i)=>{const o=A.createOscillator(),g=A.createGain(),tt=t0+i*gap;
       o.type=type;o.frequency.setValueAtTime(f,tt);
       g.gain.setValueAtTime(0,tt);g.gain.linearRampToValueAtTime(vol,tt+.02);g.gain.exponentialRampToValueAtTime(.001,tt+dur);
-      o.connect(g).connect(AC.destination);o.start(tt);o.stop(tt+dur+.05)});
+      o.connect(g).connect(A.destination);o.start(tt);o.stop(tt+dur+.05)});
   }catch(e){}
 }
 const SFX={
@@ -160,7 +241,36 @@ const SFX={
   pop:()=>tone([1200,600],{type:"square",vol:.06,gap:.03,dur:.08}),
   win:()=>tone([523,659,784,1047,784,1047],{type:"triangle",gap:.11,dur:.25}),
 };
-document.addEventListener("pointerdown",e=>{if(e.target.closest(".btn"))SFX.tap()},true);
+// A gentle generated lullaby: C–Am–F–G chords with a wandering pentatonic melody
+const MUSIC={timer:0,gain:null,next:0,step:0,mel:2};
+const SCALE=[523.25,587.33,659.25,783.99,880,1046.5], CHORDS=[[261.63,329.63,392],[220,261.63,329.63],[174.61,220,261.63],[196,246.94,293.66]];
+const MUSIC_VOL=.05;
+function musicNote(f,t,d,type,v){const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.06);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g).connect(MUSIC.gain);o.start(t);o.stop(t+d+.1)}
+function musicTick(){
+  const beat=60/84;
+  while(MUSIC.next<AC.currentTime+.6){
+    const s=MUSIC.step,tt=MUSIC.next,chord=CHORDS[Math.floor(s/8)%4];
+    if(s%8===0)chord.forEach(f=>musicNote(f/2,tt,beat*3.8,"sine",.22));
+    if(s%2===0||Math.random()<.25){MUSIC.mel=Math.max(0,Math.min(SCALE.length-1,MUSIC.mel+pick([-1,0,1,1,-2,2])));musicNote(SCALE[MUSIC.mel],tt,beat*1.4,"triangle",.3)}
+    MUSIC.step++;MUSIC.next+=beat/2;
+  }
+}
+function musicOn(){
+  if(!S.music||S.mute||MUSIC.timer||document.hidden)return;
+  try{const A=ac();MUSIC.gain=A.createGain();MUSIC.gain.gain.value=MUSIC_VOL;MUSIC.gain.connect(A.destination);MUSIC.next=A.currentTime+.1;MUSIC.timer=setInterval(musicTick,200)}catch(e){}
+}
+function musicOff(){clearInterval(MUSIC.timer);MUSIC.timer=0;const g=MUSIC.gain;if(g){g.gain.setTargetAtTime(0,AC.currentTime,.2);setTimeout(()=>g.disconnect(),1500);MUSIC.gain=null}}
+function duck(on){if(MUSIC.gain)MUSIC.gain.gain.setTargetAtTime(on?MUSIC_VOL*.3:MUSIC_VOL,AC.currentTime,.15)}
+document.addEventListener("visibilitychange",()=>document.hidden?musicOff():musicOn());
+
+// First touch: unlock audio on iOS and start music if it was on
+let audioUnlocked=false;
+document.addEventListener("pointerdown",e=>{
+  if(!audioUnlocked){audioUnlocked=true;player.src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";player.play().catch(()=>{});musicOn()}
+  if(e.target.closest(".btn"))SFX.tap();
+},true);
+
 function cheer(ok){
   const p=document.createElement("div");p.className="pop";p.textContent=ok?pick(["🌟","🎉","💖","👏"]):"🤔";
   document.body.appendChild(p);setTimeout(()=>p.remove(),1000);
@@ -169,9 +279,53 @@ function cheer(ok){
 }
 const shake=b=>{b.classList.add("no");setTimeout(()=>b.classList.remove("no"),400)};
 
+// ---------- Review weak words more often ----------
+const skey=w=>`${L_()}|${w[1]}`;
+function track(w,ok){const k=skey(w),s=S.stats[k]||(S.stats[k]={ok:0,bad:0});ok?s.ok++:s.bad++;save()}
+// unseen words and words answered wrong come up more; well-known words less
+function weight(w){const s=S.stats[skey(w)];return s?(1+2*s.bad)/(1+.5*s.ok)+.2:1.5}
+function wpick(arr){const ws=arr.map(weight);let r=Math.random()*ws.reduce((a,b)=>a+b,0);for(let i=0;i<arr.length;i++){r-=ws[i];if(r<=0)return arr[i]}return arr[arr.length-1]}
+function round(set,n){const ans=wpick(set);return{ans,opts:shuffle([ans,...shuffle(set.filter(x=>x!==ans)).slice(0,n-1)])}}
+
+// ---------- Daily play time ----------
+function tickPlay(){
+  if(document.hidden||!S.limit&&!S.age)return;
+  if(S.play.date!==today())S.play={date:today(),sec:0,extra:0};
+  if(screen!=="parent"&&screen!=="rest"){S.play.sec+=5;store.set("momo:"+PROF.cur,S)}
+  if(overLimit()&&!["level","rest","parent"].includes(screen))rest();
+}
+setInterval(tickPlay,5000);
+const overLimit=()=>S.limit>0&&S.play.date===today()&&S.play.sec>=S.limit*60+(S.play.extra||0);
+function rest(){
+  screen="rest";clearTimers();stopVoice();
+  app.innerHTML=`<div class="momo" style="font-size:7rem">${pet().e}😴</div><div class="prompt">${t("restTitle")}</div><div class="say">${t("restSub")}</div>
+    <div class="grid"><button class="btn" id="more" style="font-size:1rem">🔑 ${t("moreTime")}</button></div>`;
+  later(()=>speak(say("rest")),400);
+  $("#more").onclick=()=>parentGate(()=>{S.play.extra=(S.play.extra||0)+600;save();home()});
+}
+
+// ---------- Players screen ----------
+function profilePick(){
+  screen="profiles";clearTimers();
+  app.innerHTML=`<div class="momo">👨‍👩‍👧</div><div class="say"><b>${t("who")}</b></div>
+   <div class="grid">${PROF.list.map((p,i)=>`<button class="btn ${p.id===PROF.cur?"on":""}" data-pf="${p.id}"><span class="e">${(PETS.find(x=>x.id===p.pet)||PETS[0]).e}</span>${esc(p.name||t("player",i+1))}<small style="display:block">${p.age?t("ageLabel",p.age):"&nbsp;"}</small></button>`).join("")}
+   <button class="btn" id="addp"><span class="e">➕</span>${t("addPlayer")}<small style="display:block">&nbsp;</small></button></div>`;
+  app.querySelectorAll("[data-pf]").forEach(b=>b.onclick=()=>{musicOff();loadProfile(b.dataset.pf);save();musicOn();home()});
+  $("#addp").onclick=addPlayer;
+}
+function addPlayer(){
+  screen="profiles";
+  app.innerHTML=`<button class="btn back" id="back">🏠</button><div class="momo">🐣</div><div class="say"><b>${t("addPlayer")}</b></div>
+   <div class="row"><input id="pname" class="name" maxlength="20" placeholder="${esc(t("namePh"))}"></div>
+   <div class="grid"><button class="btn" id="mk" style="background:var(--green);color:#fff"><span class="e">✨</span>${t("create")}</button></div>`;
+  $("#back").onclick=profilePick;
+  $("#mk").onclick=()=>{const id=newId(),lang=S.lang;PROF.list.push({id,name:$("#pname").value.trim()});musicOff();loadProfile(id);S.lang=lang;save();agePick()};
+}
+const playerName=()=>{const i=PROF.list.findIndex(p=>p.id===PROF.cur);return PROF.list[i]?.name||t("player",i+1)};
+
 // ---------- Start: language + age ----------
 function agePick(){
-  clearTimers();
+  screen="age";clearTimers();
   if(!S.lang)S.lang="th";
   app.innerHTML=`<div class="momo">${pet().e}</div>
    <div class="say"><b>${t("learn")}</b></div>${langButtons("bigflags")}
@@ -184,7 +338,7 @@ function agePick(){
 
 // ---------- Buddy picker ----------
 function petPick(){
-  clearTimers();
+  screen="pet";clearTimers();
   let sel=S.pet||"momo";
   const draw=()=>{const p=PETS.find(x=>x.id===sel), nm=p.n[L_()];
     app.innerHTML=`<div class="momo" style="font-size:6rem">${p.e}</div>
@@ -198,29 +352,48 @@ function petPick(){
   draw();
 }
 
+// ---------- Daily mission: 1 new level + 2 to review ----------
+const levelKey=L=>`${S.age}:${L.id}`;
+const path=()=>PATHS[S.age];
+const unlocked=i=>i===0||S.done[levelKey(path()[i-1])]||S.done[levelKey(path()[i])];
+function mission(){
+  let m=S.mission;
+  if(!m||m.date!==today()||m.age!==S.age){
+    const p=path(),fresh=p.filter(L=>!S.done[levelKey(L)]),old=p.filter(L=>S.done[levelKey(L)]);
+    const review=shuffle(old).sort((a,b)=>S.done[levelKey(a)]-S.done[levelKey(b)]).slice(0,2);   // lowest stars first
+    const ids=[...fresh.slice(0,1),...review,...fresh.slice(1)].slice(0,3).map(L=>L.id);
+    m=S.mission={date:today(),age:S.age,ids,done:[],bonus:false};save();
+  }
+  return m;
+}
+
 // ---------- Home / level map ----------
-const levelKey=i=>`${S.age}-${i}`;
-const unlocked=i=>i===0||S.done[levelKey(i-1)];
 function diff(L){const d={...AGES[S.age]};if(L.hard){d.n=Math.min(6,d.n+1);d.speed*=.8;d.seq=Math.min(5,d.seq+1);d.cnt=Math.min(10,d.cnt+2);d.pairs=Math.min(6,d.pairs+1);d.pat=d.pat==="AB"?"AAB":"ABC"}return d}
 function home(){
-  clearTimers();
+  screen="home";clearTimers();
   if(!S.age||!S.lang)return agePick();
   if(!S.pet)return petPick();
-  const path=PATHS[S.age], g=AGES[S.age], cleared=path.filter((_,i)=>S.done[levelKey(i)]).length;
+  if(overLimit())return rest();
+  const p=path(), g=AGES[S.age], cleared=p.filter(L=>S.done[levelKey(L)]).length, m=mission();
+  const mTiles=m.ids.map(id=>{const i=p.findIndex(L=>L.id===id),L=p[i];if(!L)return"";const d=m.done.includes(id);
+    return `<button class="btn ${d?"done":""}" data-i="${i}"><span class="e">${d?"✅":GAMES[L.game].i}</span><small>${i+1}. ${levelSet(L)}</small></button>`}).join("");
   app.innerHTML=`
     <div class="momo" id="pet">${pet().e}${S.hat}</div><div class="say">${pet().hi[L_()]}</div>
     ${langButtons()}
     <div class="row">
-      <button class="btn" id="age">${g.icon} ${t("ageLabel",S.age)} ✏️</button><button class="btn" id="chpet">${pet().e} ${t("changeBuddy")}</button><button class="btn" id="mute">${S.mute?"🔇":"🔊"}</button>
+      <button class="btn" id="who">👤 ${esc(playerName())}</button>
+      <button class="btn" id="age">${g.icon} ${t("ageLabel",S.age)} ✏️</button><button class="btn" id="chpet">${pet().e} ${t("changeBuddy")}</button>
+      <button class="btn" id="mute">${S.mute?"🔇":"🔊"}</button><button class="btn ${S.music?"on":""}" id="music">🎵</button>
       <button class="btn" id="book">📒 ${t("stickers")}</button><button class="btn" id="par">👪 ${t("parents")}</button>
     </div>
-    <div class="say">${t("cleared",cleared,path.length)}</div>
-    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${path.map((L,i)=>{
-      const st=S.done[levelKey(i)]||0, open=unlocked(i);
+    <div class="card mission"><h3>${t("mission")} ${m.bonus?"🏅":`<small>(+${MISSION_BONUS}⭐)</small>`}</h3><div class="row">${mTiles}</div></div>
+    <div class="say">${t("cleared",cleared,p.length)}</div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${p.map((L,i)=>{
+      const st=S.done[levelKey(L)]||0, open=unlocked(i);
       return `<button class="btn lvl ${open?"":"locked"}" data-i="${i}" ${st?'style="background:#fff3c4"':""}>
         <span class="n">${i+1}${L.hard?" 🔥":""}</span>
         <span class="e">${open?GAMES[L.game].i:"🔒"}</span>${gameName(L.game)}
-        <small>${setName(L.set)} ${"⭐".repeat(st)}</small></button>`}).join("")}
+        <small>${levelSet(L)} ${"⭐".repeat(st)}</small></button>`}).join("")}
     </div>
     <div class="note">${t("tip")}</div>`;
   wireLangs(home);
@@ -229,34 +402,44 @@ function home(){
     if(!unlocked(i)){speak(say("locked"));return}
     run(i);
   });
-  $("#age").onclick=agePick;$("#chpet").onclick=petPick;$("#book").onclick=book;$("#par").onclick=parentGate;
-  $("#mute").onclick=()=>{S.mute=!S.mute;if(S.mute)stopVoice();save();home()};
+  $("#who").onclick=profilePick;$("#age").onclick=agePick;$("#chpet").onclick=petPick;$("#book").onclick=book;$("#par").onclick=()=>parentGate(parentPage);
+  $("#mute").onclick=()=>{S.mute=!S.mute;if(S.mute){stopVoice();musicOff()}else musicOn();save();home()};
+  $("#music").onclick=()=>{S.music=!S.music;save();S.music?musicOn():musicOff();home()};
   $("#pet").onclick=()=>speak(pet().say[L_()]);
 }
 
 // ---------- Level runner (shared by every game) ----------
 function run(idx){
   clearTimers();
-  const L=PATHS[S.age][idx], G=GAMES[L.game], d=diff(L), rounds=G.once?1:d.rounds;
+  if(overLimit())return rest();
+  screen="level";
+  const L=path()[idx], G=GAMES[L.game], d=diff(L), rounds=G.once?1:d.rounds;
   let r=0, miss=0, busy=false;
-  const ctx={L,d,set:V[L.set],
+  const ctx={L,d,set:V[L.set],wrong:0,
     ok(w){if(busy)return;busy=true;if(w)track(w,1);S.stars++;save();cheer(true);
       later(()=>{busy=false;r++;r>=rounds?finish():step()},1100)},
-    bad(w){miss++;if(w)track(w,0);cheer(false)},
+    bad(w){miss++;ctx.wrong++;if(w)track(w,0);cheer(false)},
+    hint:()=>ctx.wrong>=2,   // after 2 wrong tries in a round, the right answer glows
     head(sub=""){return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">
-      <button class="btn back" id="back">🏠</button><b>${G.i} ${gameName(L.game)} · ${setName(L.set)}</b>
+      <button class="btn back" id="back">🏠</button><b>${G.i} ${gameName(L.game)} · ${levelSet(L)}</b>
       <span>${rounds>1?"🟢".repeat(r)+"⚪".repeat(rounds-r):""}</span></div>${sub}`},
     bind(){$("#back").onclick=()=>{stopVoice();home()}},
   };
-  const step=()=>{clearTimers();GAME_FN[L.game](ctx)};
+  prefetch(ctx.set.map(w=>clipOf(word(w))));
+  const step=()=>{clearTimers();ctx.wrong=0;GAME_FN[L.game](ctx)};
   function finish(){
-    clearTimers();
-    const st=miss===0?3:miss<=2?2:1, k=levelKey(idx);
-    S.done[k]=Math.max(S.done[k]||0,st);S.stars+=st;save();
-    SFX.win();setTimeout(()=>speak(say("hooray")),700);
-    const hasNext=idx+1<PATHS[S.age].length;
+    clearTimers();screen="done";
+    const st=miss===0?3:miss<=2?2:1, k=levelKey(L);
+    S.done[k]=Math.max(S.done[k]||0,st);S.stars+=st;
+    const m=mission();let bonus=false;
+    if(m.ids.includes(L.id)&&!m.done.includes(L.id))m.done.push(L.id);
+    if(!m.bonus&&m.ids.every(id=>m.done.includes(id))){m.bonus=bonus=true;S.stars+=MISSION_BONUS}
+    save();
+    SFX.win();setTimeout(()=>{speak(say("hooray"));if(bonus)speak(say("mission"),L_(),1)},700);
+    const hasNext=idx+1<path().length;
     app.innerHTML=`<div class="momo">🎉${pet().e}🎉</div><div class="prompt" style="font-size:3rem">${"⭐".repeat(st)}${"☆".repeat(3-st)}</div>
      <div class="prompt">${t("great",st)}</div>
+     ${bonus?`<div class="card" style="text-align:center;font-size:1.4rem">🏅 ${t("missionDone",MISSION_BONUS)}</div>`:""}
      <div class="grid"><button class="btn" id="again"><span class="e">🔁</span>${t("again")}</button>
      ${hasNext?`<button class="btn" id="nx" style="background:var(--yellow)"><span class="e">➡️</span>${t("next")}</button>`:""}
      <button class="btn" id="h"><span class="e">🏠</span>${t("home")}</button></div>
@@ -266,54 +449,56 @@ function run(idx){
   step();
 }
 
-// helper: render picture choices and wire up answer checking
+// helper: render picture choices and wire up answer checking (+ glowing hint after 2 wrong tries)
 function choices(ctx,opts,ans,{show=o=>o[0],onRight,onWrong}={}){
   return {html:`<div class="choices ${opts.length===3?"c3":""}">${opts.map((o,i)=>`<button class="btn" data-c="${i}"><span class="e">${show(o)}</span></button>`).join("")}</div>`,
     wire(){app.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{const o=opts[b.dataset.c];
-      if(o===ans){b.classList.add("ok");onRight?onRight(b,o):(b.innerHTML+=`<div>${label(o)}</div>`);ctx.ok(ans)}
-      else{shake(b);onWrong?onWrong(o):0;ctx.bad(ans)}})}};
+      if(o===ans){b.classList.remove("hint");b.classList.add("ok");onRight?onRight(b,o):(b.innerHTML+=`<div>${label(o)}</div>`);ctx.ok(ans)}
+      else{shake(b);onWrong?onWrong(o):0;ctx.bad(ans);
+        if(ctx.hint())app.querySelector(`[data-c="${opts.indexOf(ans)}"]`)?.classList.add("hint")}})}};
 }
 const listenBtn=()=>`<div class="prompt"><button class="btn" id="rep">🔊 ${t("listenAgain")}</button></div>`;
 
 const GAME_FN={
   // 1. Listen and tap the picture
   tap(ctx){
-    const opts=shuffle(ctx.set).slice(0,ctx.d.n), ans=pick(opts), s=()=>speak(word(ans));
+    const {ans,opts}=round(ctx.set,ctx.d.n), s=()=>sayWord(ans);
     const c=choices(ctx,opts,ans,{onWrong:()=>later(s,900)});
     app.innerHTML=ctx.head(listenBtn())+c.html;
     ctx.bind();c.wire();s();$("#rep").onclick=s;
   },
   // 2. Match the shadow to the picture
   shadow(ctx){
-    const opts=shuffle(ctx.set).slice(0,ctx.d.n), ans=pick(opts);
-    const c=choices(ctx,opts,ans,{onRight:(b,o)=>{$("#sh").classList.remove("shadow");b.innerHTML+=`<div>${label(o)}</div>`;speak(word(o))}});
+    const {ans,opts}=round(ctx.set,ctx.d.n);
+    const c=choices(ctx,opts,ans,{onRight:(b,o)=>{$("#sh").classList.remove("shadow");b.innerHTML+=`<div>${label(o)}</div>`;sayWord(o)}});
     app.innerHTML=ctx.head(`<div class="say">${t("whoseShadow")}</div><div class="big shadow" id="sh">${ans[0]}</div>`)+c.html;
     ctx.bind();c.wire();speak(say("shadow"));
   },
   // 3. Pop the floating balloon that the buddy names
   pop(ctx){
-    const pool=shuffle(ctx.set).slice(0,ctx.d.n+1), ans=pick(pool), s=()=>speak(word(ans));
+    const {ans,opts:pool}=round(ctx.set,ctx.d.n+1), s=()=>sayWord(ans);
     app.innerHTML=ctx.head(`<div class="prompt"><button class="btn" id="rep">🔊 ${t("popThe")} … ${S.age<=4?ans[0]:"❓"}</button></div>`)+`<div class="sky" id="sky"></div>`;
     ctx.bind();$("#rep").onclick=s;s();
     const sky=$("#sky");
     const spawn=()=>{
       const w=Math.random()<.4?ans:pick(pool), b=document.createElement("button");
-      b.className="balloon";b.textContent=w[0];b.style.left=rnd(4,80)+"%";b.style.animationDuration=ctx.d.speed+"s";
-      b.onanimationend=()=>b.remove();
+      b.className="balloon"+(w===ans&&ctx.hint()?" hint":"");b.textContent=w[0];b.style.left=rnd(4,80)+"%";b.style.animationDuration=ctx.d.speed+"s";
+      b.dataset.ans=w===ans?1:"";
+      b.onanimationend=e=>{if(e.animationName==="rise")b.remove()};
       b.onclick=()=>{if(w===ans){b.style.animation="none";b.style.transform="scale(1.6)";b.textContent="💥";SFX.pop();
           setTimeout(()=>b.remove(),300);speak(word(ans));ctx.ok(ans)}
-        else{shake(b);ctx.bad(ans);later(s,800)}};
+        else{shake(b);ctx.bad(ans);if(ctx.hint())sky.querySelectorAll('[data-ans="1"]').forEach(x=>x.classList.add("hint"));later(s,800)}};
       sky.appendChild(b);
     };
     spawn();every(spawn,ctx.d.speed*220);
   },
   // 4. Memory match (age 3–4: picture↔picture, 5+: picture↔word)
   memory(ctx){
-    const pairs=Math.min(ctx.d.pairs,ctx.set.length), picks=shuffle(ctx.set).slice(0,pairs), words=S.age>=5;
+    const pairs=Math.min(ctx.d.pairs,ctx.set.length), picks=shuffle(ctx.set).sort((a,b)=>weight(b)-weight(a)).slice(0,pairs), words=S.age>=5;
     const cards=shuffle(picks.flatMap(w=>[{w,t:w[0]},{w,t:words?word(w):w[0],txt:words}]));
     let open=[],done=0,lock=false;
     app.innerHTML=ctx.head(`<div class="say">${words?t("matchWords"):t("findSame")}</div>`)+
-      `<div class="grid mem" style="grid-template-columns:repeat(${cards.length>8?4:3},1fr)">${cards.map((c,i)=>`<button class="btn hid" data-i="${i}" style="${c.txt?"font-size:1.1rem":""}">${c.t}</button>`).join("")}</div>`;
+      `<div class="grid mem" style="grid-template-columns:repeat(${cards.length>8?4:3},1fr)">${cards.map((c,i)=>`<button class="btn hid" data-i="${i}" style="${c.txt?"font-size:1.1rem":""}">${esc(c.t)}</button>`).join("")}</div>`;
     ctx.bind();
     app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
       if(lock||!b.classList.contains("hid"))return;
@@ -328,15 +513,14 @@ const GAME_FN={
   },
   // 5. Count the objects
   count(ctx){
-    const pool=V.numbers.slice(0,ctx.d.cnt), ans=pick(pool), item=pick(["🍎","🐥","⭐","🎈","🚗","🐟","🌸"]);
-    const opts=shuffle([ans,...shuffle(pool.filter(x=>x!==ans)).slice(0,Math.min(ctx.d.n,pool.length)-1)]);
+    const pool=V.numbers.slice(0,ctx.d.cnt), {ans,opts}=round(pool,Math.min(ctx.d.n,pool.length)), item=pick(["🍎","🐥","⭐","🎈","🚗","🐟","🌸"]);
     const c=choices(ctx,opts,ans,{onRight:()=>speak(word(ans))});
     app.innerHTML=ctx.head(`<div class="prompt" style="font-size:2.6rem;line-height:1.3">${item.repeat(ans[0])}</div><div class="say">${t("howMany")}</div>`)+c.html;
     ctx.bind();c.wire();speak(say("howMany"));
   },
   // 6. Put N of something in the basket
   basket(ctx){
-    const want=pick(ctx.set), n=rnd(1,Math.min(5,ctx.d.cnt));
+    const want=wpick(ctx.set), n=rnd(1,Math.min(5,ctx.d.cnt));
     const shelf=shuffle([...Array(n+2).fill(want),...shuffle(ctx.set.filter(x=>x!==want)).slice(0,ctx.d.n+1)]);
     const ask=()=>speak(say("basket")(n,want));
     let got=0;
@@ -346,8 +530,9 @@ const GAME_FN={
     ctx.bind();ask();$("#rep").onclick=ask;
     app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{
       if(got>=n)return;const f=shelf[b.dataset.i];
-      if(f!==want){shake(b);speak(word(f));ctx.bad(want);return}
-      b.style.visibility="hidden";got++;$("#bk").textContent+=f[0];speak(word(V.numbers[got-1]));
+      if(f!==want){shake(b);speak(word(f));ctx.bad(want);
+        if(ctx.hint())app.querySelectorAll("[data-i]").forEach(x=>{if(shelf[x.dataset.i]===want)x.classList.add("hint")});return}
+      b.style.visibility="hidden";got++;$("#bk").append(f[0]);speak(word(V.numbers[got-1]));
       if(got===n)later(()=>ctx.ok(want),600);
     });
   },
@@ -355,7 +540,7 @@ const GAME_FN={
   odd(ctx){
     const others=Object.keys(V).filter(k=>k!==ctx.L.set&&k!=="numbers");
     const same=shuffle(ctx.set).slice(0,ctx.d.n), ans=pick(V[pick(others)]), opts=shuffle([...same,ans]);
-    const c=choices(ctx,opts,ans,{onRight:(b,o)=>{b.innerHTML+=`<div>${label(o)}</div>`;speak(word(o))}});
+    const c=choices(ctx,opts,ans,{onRight:(b,o)=>{b.innerHTML+=`<div>${label(o)}</div>`;sayWord(o)}});
     app.innerHTML=ctx.head(`<div class="say">${t("odd",setName(ctx.L.set))}</div>`)+c.html;
     ctx.bind();c.wire();speak(say("odd"));
   },
@@ -372,9 +557,8 @@ const GAME_FN={
   },
   // 9. Reading: first letter (EN) / pick the right word (ZH characters, Thai script)
   letter(ctx){
-    const ans=pick(ctx.set);
+    const {ans,opts}=round(ctx.set,ctx.d.n);
     if(S.lang!=="en"){
-      const opts=shuffle([ans,...shuffle(ctx.set.filter(x=>x!==ans)).slice(0,ctx.d.n-1)]);
       const c=choices(ctx,opts,ans,{show:o=>`<span class="word">${word(o)}</span>`,
         onRight:(b,o)=>{if(S.lang==="zh")b.innerHTML+=`<small>${o[3]}</small>`;speak(word(o))}});
       app.innerHTML=ctx.head(`<div class="say">${t("whichWord")}</div><div class="big">${ans[0]}</div>`)+c.html;
@@ -389,19 +573,20 @@ const GAME_FN={
   },
   // 10. Remember the order (parrot game)
   seq(ctx){
-    const len=ctx.d.seq, list=Array.from({length:len},()=>pick(ctx.set)), opts=shuffle([...new Set([...list,...shuffle(ctx.set)])]).slice(0,Math.max(ctx.d.n,new Set(list).size));
+    const len=ctx.d.seq, list=Array.from({length:len},()=>wpick(ctx.set)), opts=shuffle([...new Set([...list,...shuffle(ctx.set)])]).slice(0,Math.max(ctx.d.n,new Set(list).size));
     if(!list.every(w=>opts.includes(w)))list.forEach((w,i)=>{if(!opts.includes(w))opts[i]=w});
     let pos=0;
     const play=()=>{stopVoice();list.forEach(w=>speak(word(w),L_(),1))};
+    const showHint=()=>{app.querySelectorAll("[data-c]").forEach(x=>x.classList.toggle("hint",ctx.hint()&&opts[x.dataset.c]===list[pos]))};
     app.innerHTML=ctx.head(`<div class="say">${t("listenOrder",petName(),len)}</div>
       ${listenBtn()}<div class="seq" id="got">${"⬜".repeat(len)}</div>`)+
       `<div class="choices ${opts.length===3?"c3":""}">${opts.map((o,i)=>`<button class="btn" data-c="${i}"><span class="e">${o[0]}</span></button>`).join("")}</div>`;
-    ctx.bind();$("#rep").onclick=()=>{pos=0;$("#got").textContent="⬜".repeat(len);play()};later(play,300);
+    ctx.bind();$("#rep").onclick=()=>{pos=0;$("#got").textContent="⬜".repeat(len);showHint();play()};later(play,300);
     app.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
       const o=opts[b.dataset.c];
-      if(o===list[pos]){pos++;$("#got").textContent=list.slice(0,pos).map(w=>w[0]).join("")+"⬜".repeat(len-pos);speak(word(o));
+      if(o===list[pos]){pos++;$("#got").textContent=list.slice(0,pos).map(w=>w[0]).join("")+"⬜".repeat(len-pos);speak(word(o));showHint();
         if(pos===len)ctx.ok(list[0])}
-      else{shake(b);ctx.bad(list[pos]);pos=0;later(()=>{$("#got").textContent="⬜".repeat(len);play()},900)}
+      else{shake(b);ctx.bad(list[pos]);pos=0;showHint();later(()=>{$("#got").textContent="⬜".repeat(len);play()},900)}
     });
   },
   // 11. Picture addition
@@ -414,11 +599,11 @@ const GAME_FN={
   },
   // 12. Say the word out loud (speech recognition)
   talk(ctx){
-    const w=pick(ctx.set), SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    const w=wpick(ctx.set), SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     app.innerHTML=ctx.head(`<div class="big">${w[0]}</div><div class="prompt">${label(w)}</div>
       <div class="grid"><button class="btn" id="rep"><span class="e">🔊</span>${t("listen")}</button>
       <button class="btn" id="mic" style="background:var(--yellow)"><span class="e">🎤</span>${SR?t("pressSpeak"):t("sayThenTap")}</button></div><div class="say" id="heard"></div>`);
-    ctx.bind();const s=()=>speak(word(w));s();$("#rep").onclick=s;
+    ctx.bind();const s=()=>sayWord(w);s();$("#rep").onclick=s;
     $("#mic").onclick=()=>{
       if(!SR){ctx.ok(w);return}   // no recognition: grown-up confirms
       const r=new SR();r.lang=LC[L_()];r.maxAlternatives=5;$("#heard").textContent=t("listening");
@@ -430,10 +615,29 @@ const GAME_FN={
       r.start();
     };
   },
+  // 13. Short sentences: listen, then tap the matching picture
+  sentence(ctx){
+    const f=SENT[L_()][ctx.L.set], {ans,opts}=round(ctx.set,ctx.d.n), s=()=>speak(f(ans));
+    prefetch(ctx.set.map(w=>clipOf(f(w))));
+    const c=choices(ctx,opts,ans,{onWrong:()=>later(s,900)});
+    app.innerHTML=ctx.head(`<div class="say">${t("whichPicture")}</div>${S.age>=6?`<div class="prompt">“${esc(f(ans))}”</div>`:""}${listenBtn()}`)+c.html;
+    ctx.bind();c.wire();s();$("#rep").onclick=s;
+  },
+  // 14. Alphabet: A–Z (English) or ก–ฮ (Thai); Chinese reads characters instead
+  abc(ctx){
+    const lang=L_();if(!ABC[lang])return GAME_FN.letter(ctx);
+    const pool=ABC[lang].slice(0,ABC_SIZE[lang][ctx.L.hard?6:S.age]), {ans,opts}=round(pool,ctx.d.n), s=()=>speak(ans[3]);
+    prefetch(pool.map(x=>clipOf(x[3])));
+    const show=o=>`<span class="letter">${lang==="en"?o[1]+o[1].toLowerCase():o[1]}</span>`;
+    const c=choices(ctx,opts,ans,{show,onRight:()=>{$("#aw").textContent=ans[2];s()}});
+    app.innerHTML=ctx.head(`<div class="say">${t("whichLetter")}</div><div class="big">${ans[0]}</div><div class="prompt" id="aw">${S.age<5?ans[2]:"&nbsp;"}</div>${listenBtn()}`)+c.html;
+    ctx.bind();c.wire();s();$("#rep").onclick=s;
+  },
 };
 
 // ---------- Sticker book ----------
 function book(){
+  screen="book";
   const free=S.stars-S.spent;
   app.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><button class="btn back" id="back">🏠</button><b>${t("bookTitle")}</b><span>⭐ ${free}</span></div>
     <div class="say">${t("bookSub",PRICE,petName())}</div>
@@ -450,32 +654,72 @@ function book(){
   app.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{if(S.stickers.includes(b.dataset.s)){S.hat=S.hat===b.dataset.s?"":b.dataset.s;save();book()}});
 }
 
-// ---------- Parent page (grown-up gate) ----------
-function parentGate(){
+// ---------- Grown-up gate, parent report & settings ----------
+function parentGate(onPass){
+  const prev=screen;screen="parent";
   const a=rnd(3,8),b=rnd(4,8),opts=shuffle([a+b,a+b+2,a+b-1]);
   app.innerHTML=`<button class="btn back" id="back">🏠</button><div class="prompt">${t("gate")}: ${a} + ${b} = ?</div>
     <div class="choices c3">${opts.map(o=>`<button class="btn" data-o="${o}"><span class="e">${o}</span></button>`).join("")}</div>`;
-  $("#back").onclick=home;app.querySelectorAll("[data-o]").forEach(x=>x.onclick=()=>x.dataset.o==a+b?parentPage():home());
+  const leave=()=>prev==="rest"?rest():home();
+  $("#back").onclick=leave;app.querySelectorAll("[data-o]").forEach(x=>x.onclick=()=>x.dataset.o==a+b?onPass():leave());
+}
+async function downloadOffline(btn){
+  if(!("caches" in window))return;
+  btn.disabled=true;
+  const urls=[...new Set([...Object.values(CLIPS).map(f=>"audio/"+f),...EMOJI.map(c=>`emoji/${c}.svg`)])];
+  const cache=await caches.open("momo-media"), q=[...urls];let n=0,fail=0;
+  const worker=async()=>{while(q.length){const u=q.shift();
+    try{if(!(await cache.match(u))){const r=await fetch(u);if(!r.ok)throw 0;await cache.put(u,r)}}catch(e){fail++}
+    btn.textContent=t("downloading",++n,urls.length)}};
+  await Promise.all(Array.from({length:6},worker));
+  btn.textContent=fail?t("offlineFail"):t("offlineDone");btn.disabled=false;
+  if(!fail)store.set("momo-offline",urls.length);
 }
 function parentPage(){
-  const rows=allWords().filter(w=>S.stats[w[1]]).map(w=>({w,...S.stats[w[1]]}));
-  const learned=rows.filter(r=>r.ok>=3&&r.ok>r.bad*2), hard=rows.filter(r=>r.bad>=2&&!learned.includes(r)).sort((a,b)=>b.bad-a.bad);
-  const chip=r=>`<span class="btn" style="display:inline-block;padding:8px 12px;margin:4px;font-size:1rem">${r.w[0]} ${r.w[1]} · ${r.w[2]} · ${r.w[4]} <small>✔${r.ok} ✘${r.bad}</small></span>`;
-  const prog=Object.keys(AGES).map(a=>`${AGES[a].icon} ${t("ageLabel",a)}: <b>${PATHS[a].filter((_,i)=>S.done[`${a}-${i}`]).length}/${PATHS[a].length}</b>`).join(" · ");
-  app.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><button class="btn back" id="back">🏠</button><b>${t("report")}</b><span></span></div>
-    <p>${t("totals",S.stars,S.stickers.length,STICKERS.length,rows.length,allWords().length)}</p>
-    <p>${t("levelsPassed")} — ${prog}</p>
-    <h3>${t("known")} (${learned.length})</h3><div>${learned.map(chip).join("")||`<i>${t("noneKnown")}</i>`}</div>
-    <h3>${t("practise")} (${hard.length})</h3><div>${hard.map(chip).join("")||`<i>${t("noneHard")}</i>`}</div>
-    <p class="note">${t("parentTip")}</p>
-    <button class="btn" id="reset" style="font-size:.9rem">${t("reset")}</button>`;
+  screen="parent";clearTimers();
+  const words=allWords().filter(w=>S.stats[skey(w)]).map(w=>({w,...S.stats[skey(w)]}));
+  const learned=words.filter(r=>r.ok>=3&&r.ok>r.bad*2), hard=words.filter(r=>r.bad>=2&&!learned.includes(r)).sort((a,b)=>b.bad-a.bad);
+  const chip=r=>`<span class="btn" style="display:inline-block;padding:8px 12px;margin:4px;font-size:1rem">${r.w[0]} ${esc(word(r.w))}${L_()!=="th"?` · ${r.w[4]}`:""} <small>✔${r.ok} ✘${r.bad}</small></span>`;
+  const prog=Object.keys(AGES).map(a=>`${AGES[a].icon} ${t("ageLabel",a)}: <b>${PATHS[a].filter(L=>S.done[`${a}:${L.id}`]).length}/${PATHS[a].length}</b>`).join(" · ");
+  const mins=S.play.date===today()?Math.floor(S.play.sec/60):0, offline=store.get("momo-offline");
+  app.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><button class="btn back" id="back">🏠</button><b>${t("report")} · ${esc(playerName())}</b><span></span></div>
+    <div class="card">
+      <p>${t("totals",S.stars,S.stickers.length,STICKERS.length,words.length,allWords().length)}</p>
+      <p>${t("levelsPassed")} — ${prog}</p>
+      <h3>${t("known")} (${learned.length})</h3><div>${learned.map(chip).join("")||`<i>${t("noneKnown")}</i>`}</div>
+      <h3 style="margin-top:12px">${t("practise")} (${hard.length})</h3><div>${hard.map(chip).join("")||`<i>${t("noneHard")}</i>`}</div>
+      <p class="note">${t("parentTip")}</p>
+    </div>
+    <div class="card"><h3>${t("settings")}</h3>
+      <div><b>${t("limit")}</b> <small>${t("today",mins)}</small></div>
+      <div class="set">${[0,10,15,20,30].map(m=>`<button class="btn ${S.limit===m?"on":""}" data-lim="${m}">${m?t("minutes",m):t("off")}</button>`).join("")}</div>
+      ${L_()!=="th"?`<div class="set"><button class="btn ${S.bilingual?"on":""}" id="bil">${S.bilingual?"✅":"⬜"} ${t("bilingual")}</button></div>`:""}
+      <div class="set"><button class="btn ${S.music?"on":""}" id="mus">${S.music?"✅":"⬜"} 🎵 ${t("music")}</button></div>
+      <div class="set"><button class="btn" id="dl">${offline?t("offlineDone"):t("offline")}</button></div>
+      <hr style="border:0;border-top:1px solid #0001">
+      <div><b>👤 ${t("profile")}</b></div>
+      <div class="set"><input id="pname" class="name" maxlength="20" value="${esc(PROF.list.find(p=>p.id===PROF.cur)?.name||"")}" placeholder="${esc(t("namePh"))}"><button class="btn" id="ren">${t("rename")}</button></div>
+      <div class="set"><button class="btn" id="reset">${t("reset")}</button>${PROF.list.length>1?`<button class="btn" id="delp">${t("deleteP")}</button>`:""}</div>
+    </div>
+    <div class="card"><h3>${t("privacy")}</h3><ul class="priv">${t("privacyText")}</ul><p class="note">${t("credits")}</p></div>`;
   $("#back").onclick=home;
-  $("#reset").onclick=()=>{if(confirm(t("confirmReset"))){Object.assign(S,{stars:0,spent:0,stickers:[],stats:{},done:{},hat:"",age:0,pet:""});save();home()}};
+  app.querySelectorAll("[data-lim]").forEach(b=>b.onclick=()=>{S.limit=+b.dataset.lim;save();parentPage()});
+  $("#bil")&&($("#bil").onclick=()=>{S.bilingual=!S.bilingual;save();parentPage()});
+  $("#mus").onclick=()=>{S.music=!S.music;save();S.music?musicOn():musicOff();parentPage()};
+  $("#dl").onclick=e=>downloadOffline(e.currentTarget);
+  $("#ren").onclick=()=>{const p=PROF.list.find(x=>x.id===PROF.cur);p.name=$("#pname").value.trim();save();parentPage()};
+  $("#reset").onclick=()=>{if(confirm(t("confirmReset"))){const keep={lang:S.lang,limit:S.limit,bilingual:S.bilingual,music:S.music};for(const k in S)delete S[k];Object.assign(S,DEF(),keep);save();home()}};
+  $("#delp")&&($("#delp").onclick=()=>{if(!confirm(t("confirmDelete",playerName())))return;
+    try{localStorage.removeItem("momo:"+PROF.cur)}catch(e){}
+    PROF.list=PROF.list.filter(p=>p.id!==PROF.cur);loadProfile(PROF.list[0].id);save();profilePick()});
 }
 
-save();home();
+// ---------- Boot ----------
+loadProfile(PROF.cur);save();
+PROF.list.length>1?profilePick():home();
 if(window.speechSynthesis)speechSynthesis.getVoices();
 if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js");
+if(ANALYTICS_TOKEN){const s=document.createElement("script");s.defer=true;s.src="https://static.cloudflareinsights.com/beacon.min.js";s.dataset.cfBeacon=JSON.stringify({token:ANALYTICS_TOKEN});document.head.append(s)}
 </script>
 </body>
 </html>
