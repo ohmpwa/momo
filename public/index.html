@@ -7,6 +7,9 @@
 <title>Momo</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Momo">
 <style>
 :root{--bg:#fff6e9;--card:#fff;--pink:#ff8fab;--yellow:#ffd166;--green:#06d6a0;--blue:#4cc9f0;--purple:#b388ff;--ink:#5a3e36}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
@@ -304,6 +307,23 @@ function rest(){
   $("#more").onclick=()=>parentGate(()=>{S.play.extra=(S.play.extra||0)+600;save();home()});
 }
 
+// ---------- Install as an app (PWA) ----------
+// Chrome/Edge/Android offer a native install prompt; iPhone/iPad need "Add to Home Screen" from Safari's share menu.
+let installPrompt=null;
+const isInstalled=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const canInstall=()=>!isInstalled()&&(installPrompt||isIOS());
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;if(screen==="home")home()});
+window.addEventListener("appinstalled",()=>{installPrompt=null;if(screen==="home")home()});
+async function installApp(){
+  if(installPrompt){installPrompt.prompt();await installPrompt.userChoice.catch(()=>{});installPrompt=null;if(screen==="home")home();return}
+  const box=document.createElement("div");
+  box.style.cssText="position:fixed;inset:0;background:#0006;display:flex;align-items:center;justify-content:center;padding:16px;z-index:20";
+  box.innerHTML=`<div class="card" style="max-width:420px;margin:0"><h3>${t("iosTitle")}</h3><ol class="priv">${t("iosSteps")}</ol><p class="note">${t("iosOther")}</p>
+    <div class="grid"><button class="btn on" id="iosok">${t("close")}</button></div></div>`;
+  document.body.append(box);box.querySelector("#iosok").onclick=()=>box.remove();
+}
+
 // ---------- Players screen ----------
 function profilePick(){
   screen="profiles";clearTimers();
@@ -385,6 +405,7 @@ function home(){
       <button class="btn" id="age">${g.icon} ${t("ageLabel",S.age)} ✏️</button><button class="btn" id="chpet">${pet().e} ${t("changeBuddy")}</button>
       <button class="btn" id="mute">${S.mute?"🔇":"🔊"}</button><button class="btn ${S.music?"on":""}" id="music">🎵</button>
       <button class="btn" id="book">📒 ${t("stickers")}</button><button class="btn" id="par">👪 ${t("parents")}</button>
+      ${canInstall()?`<button class="btn" id="install" style="background:var(--green);color:#fff">${t("install")}</button>`:""}
     </div>
     <div class="card mission"><h3>${t("mission")} ${m.bonus?"🏅":`<small>(+${MISSION_BONUS}⭐)</small>`}</h3><div class="row">${mTiles}</div></div>
     <div class="say">${t("cleared",cleared,p.length)}</div>
@@ -406,6 +427,7 @@ function home(){
   $("#mute").onclick=()=>{S.mute=!S.mute;if(S.mute){stopVoice();musicOff()}else musicOn();save();home()};
   $("#music").onclick=()=>{S.music=!S.music;save();S.music?musicOn():musicOff();home()};
   $("#pet").onclick=()=>speak(pet().say[L_()]);
+  $("#install")&&($("#install").onclick=installApp);
 }
 
 // ---------- Level runner (shared by every game) ----------

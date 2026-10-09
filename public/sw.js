@@ -3,9 +3,9 @@
 // Voices & pictures (/audio, /emoji): content never changes for a given file name, so they live in a
 // separate long-lived cache ("momo-media") that survives releases and is filled by the parent page's
 // "download for offline" button or on first use.
-const C = "momo-v9";
+const C = "momo-v10";
 const MEDIA = "momo-media";
-const FILES = ["./", "index.html", "manifest.json", "data.js", "icon.svg", "audio/index.json", "emoji/index.json"];
+const FILES = ["./", "index.html", "manifest.json", "data.js", "icon.svg", "icon-192.png", "audio/index.json", "emoji/index.json"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(C).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener("activate", e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== C && k !== MEDIA).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener("fetch", e => {

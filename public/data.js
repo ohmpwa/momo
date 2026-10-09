@@ -207,6 +207,7 @@ function spokenPhrases() {
 // ---------- On-screen text ----------
 const UI = {
   en:{
+    install:"📲 Install app", iosTitle:"📲 Add Momo to your Home Screen", iosSteps:"<li>Tap the <b>Share</b> button <b>⬆️</b> at the bottom (or top) of Safari</li><li>Choose <b>Add to Home Screen ➕</b></li><li>Tap <b>Add</b> — Momo opens like an app, full screen</li>", iosOther:"On iPhone/iPad this works in Safari.", close:"OK",
     ageQ:"How old are you?", ageSub:"We'll set the right difficulty (you can change it later)",
     ageLabel:a=>`${a} years`, kg:{3:"Kindergarten 1",4:"Kindergarten 1–2",5:"Kindergarten 2–3",6:"Kindergarten 3"},
     learn:"I want to learn", pickBuddy:"Pick a buddy to play with!", playWith:n=>`Play with ${n}!`,
@@ -237,6 +238,7 @@ const UI = {
     profile:"Player", save:"Save",
   },
   zh:{
+    install:"📲 安装应用", iosTitle:"📲 把Momo添加到主屏幕", iosSteps:"<li>点Safari底部(或顶部)的<b>分享</b>按钮 <b>⬆️</b></li><li>选择<b>添加到主屏幕 ➕</b></li><li>点<b>添加</b>,Momo就会像应用一样全屏打开</li>", iosOther:"iPhone/iPad 请使用 Safari。", close:"好的",
     ageQ:"小朋友几岁啦?", ageSub:"选择年龄来调整难度(以后可以更改)",
     ageLabel:a=>`${a}岁`, kg:{3:"幼儿园小班",4:"小班–中班",5:"中班–大班",6:"幼儿园大班"},
     learn:"我想学", pickBuddy:"选一个好朋友一起玩吧!", playWith:n=>`和${n}一起玩!`,
@@ -267,6 +269,7 @@ const UI = {
     profile:"玩家", save:"保存",
   },
   th:{
+    install:"📲 ติดตั้งแอป", iosTitle:"📲 เพิ่ม Momo ไว้ที่หน้าจอโฮม", iosSteps:"<li>แตะปุ่ม <b>แชร์</b> <b>⬆️</b> ด้านล่าง (หรือด้านบน) ของ Safari</li><li>เลือก <b>เพิ่มไปยังหน้าจอโฮม ➕</b></li><li>แตะ <b>เพิ่ม</b> แล้ว Momo จะเปิดเต็มจอเหมือนแอป</li>", iosOther:"บน iPhone/iPad ให้เปิดด้วย Safari", close:"ตกลง",
     ageQ:"น้องอายุเท่าไหร่จ๊ะ?", ageSub:"เลือกเพื่อปรับความยากให้พอดี (เปลี่ยนได้ทีหลัง)",
     ageLabel:a=>`${a} ขวบ`, kg:{3:"อนุบาล 1",4:"อนุบาล 1–2",5:"อนุบาล 2–3",6:"อนุบาล 3"},
     learn:"อยากฝึกภาษา", pickBuddy:"เลือกเพื่อนร่วมเล่นกันเลย!", playWith:n=>`ไปเล่นกับ${n}!`,
